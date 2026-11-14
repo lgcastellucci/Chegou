@@ -1,5 +1,44 @@
--- MVP Encomendas de Condomínio (SQL Server)
+-- MVP Chegou - Encomendas de Condomínio (SQL Server)
 -- Multi-tenant: todo registro carrega CondominioId.
+
+-- Arquivos do banco em /databases (a pasta precisa existir e ser gravável pelo SQL Server).
+IF DB_ID(N'Chegou') IS NULL
+    CREATE DATABASE [Chegou]
+    ON PRIMARY
+    (
+        NAME = N'Chegou',
+        FILENAME = N'/databases/Chegou.mdf',
+        SIZE = 64MB,
+        FILEGROWTH = 64MB
+    )
+    LOG ON
+    (
+        NAME = N'Chegou_log',
+        FILENAME = N'/databases/Chegou_log.ldf',
+        SIZE = 32MB,
+        FILEGROWTH = 32MB
+    );
+GO
+
+-- Login dedicado da aplicação (isolado dos demais bancos do servidor).
+-- O servidor SQL não é público, por isso a senha pode ficar versionada.
+IF SUSER_ID(N'chegou_app') IS NULL
+    CREATE LOGIN [chegou_app]
+        WITH PASSWORD = N'JnwIcUQibEPPI9MJ_aw5qmvV',
+             DEFAULT_DATABASE = [Chegou],
+             CHECK_EXPIRATION = OFF,
+             CHECK_POLICY = ON;
+GO
+
+USE [Chegou];
+GO
+
+-- Usuário no banco Chegou: só leitura/escrita de dados (sem db_owner, sem DDL).
+IF USER_ID(N'chegou_app') IS NULL
+    CREATE USER [chegou_app] FOR LOGIN [chegou_app] WITH DEFAULT_SCHEMA = [dbo];
+ALTER ROLE db_datareader ADD MEMBER [chegou_app];
+ALTER ROLE db_datawriter ADD MEMBER [chegou_app];
+GO
 
 CREATE TABLE Condominio (
     Id              INT IDENTITY PRIMARY KEY,
