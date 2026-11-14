@@ -1,5 +1,4 @@
 using System.Text.Json.Serialization;
-using Chegou.Api;
 using Chegou.Domain.Abstractions;
 using Chegou.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -24,7 +23,8 @@ builder.Services.AddOpenApi(options =>
         return Task.CompletedTask;
     });
 });
-builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+builder.Services.AddControllers()
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 builder.Services.AddDbContext<ChegouDbContext>(o =>
     o.UseSqlServer(builder.Configuration.GetConnectionString("Default")));
@@ -54,6 +54,6 @@ if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Docs:Ha
 }
 
 app.MapGet("/", () => "Chegou API");
-app.MapEncomendas();
+app.MapControllers();
 
 app.Run();

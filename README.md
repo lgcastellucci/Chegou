@@ -9,7 +9,7 @@ Chegou.slnx
 src/
   Chegou.Domain          entidades, abstrações e matching (nome x morador) — sem dependências
   Chegou.Infrastructure  EF Core (SQL Server), extrator via Claude, storage de fotos, notificador
-  Chegou.Api             minimal API (.NET 10)
+  Chegou.Api             Web API com Controllers (.NET 10): Controllers/, Contracts/ (requests/responses)
 tests/Chegou.Tests       testes do matching (xUnit)
 db/schema-encomendas.sql esquema SQL Server
 docs/                    prompt de extração e regras de matching
@@ -33,7 +33,7 @@ dotnet run
 - Interface interativa (Swagger UI): `http://localhost:<porta>/swagger`
 - Especificação OpenAPI 3.1: `/openapi/v1.json` (gerada pelo `Microsoft.AspNetCore.OpenApi`, nativo do .NET 10)
 - Disponível em Development. Em produção, ligue com `"Docs": { "Habilitar": true }` no `appsettings.json`.
-- Para documentar um endpoint novo: `.WithSummary(...)`, `.WithDescription(...)` e `.Produces(...)` na rota.
+- Para documentar uma action nova: `[EndpointSummary]`, `[EndpointDescription]` e `[ProducesResponseType<T>(...)]`. Os headers provisórios aparecem como parâmetros porque usam `[FromHeader]`.
 
 ## Banco de dados
 
