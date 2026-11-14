@@ -1,6 +1,45 @@
 @Chegou.Api_HostAddress = http://localhost:5234
 
-GET {{Chegou.Api_HostAddress}}/weatherforecast/
+### Encomendas na portaria
+GET {{Chegou.Api_HostAddress}}/api/encomendas/pendentes
 Accept: application/json
 
-###
+### Ler a etiqueta de uma foto (troque o caminho da imagem)
+POST {{Chegou.Api_HostAddress}}/api/encomendas/extrair
+Content-Type: multipart/form-data; boundary=chegou
+
+--chegou
+Content-Disposition: form-data; name="foto"; filename="etiqueta.jpg"
+Content-Type: image/jpeg
+
+< ./etiqueta.jpg
+--chegou--
+
+### Confirmar o morador e registrar a encomenda
+POST {{Chegou.Api_HostAddress}}/api/encomendas
+Content-Type: application/json
+
+{
+  "fotoPath": null,
+  "etiqueta": {
+    "transportadora": "CORREIOS",
+    "destinatario": "Maria da Silva",
+    "bloco": "A",
+    "apartamento": "101",
+    "rastreio": "AA123456789BR",
+    "confianca": 0.95,
+    "problemas": []
+  },
+  "moradorId": 1,
+  "moradorSugeridoId": 1,
+  "scoreMatch": 1.0
+}
+
+### Registrar a retirada (troque o id e o código recebido na confirmação)
+POST {{Chegou.Api_HostAddress}}/api/encomendas/1/retirar
+Content-Type: application/json
+
+{
+  "codigo": "000000",
+  "retiradaPorNome": "Maria da Silva"
+}

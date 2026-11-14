@@ -1,5 +1,5 @@
-
 using Chegou.Api.Domain;
+using Chegou.Api.Domain.Integracoes;
 
 namespace Chegou.Api
 {
@@ -15,12 +15,27 @@ namespace Chegou.Api
             builder.Services.AddOpenApi();
 
 
-            // Acesso a dados: Microsoft.Data.SqlClient
+            // Acesso a dados: Microsoft.Data.SqlClient (ADO.NET)
             builder.Services.AddSingleton<IDbConnectionFactory>(_ =>
                 new SqlConnectionFactory(builder.Configuration.GetConnectionString("Default")
                     ?? throw new InvalidOperationException("ConnectionStrings:Default não configurada.")));
+
+            // Casos de uso (um por classe)
             builder.Services.AddScoped<EncomendasPendentes>();
             builder.Services.AddScoped<EncomendaRetirada>();
+            builder.Services.AddScoped<EncomendaExtrair>();
+            builder.Services.AddScoped<EncomendaConfirmar>();
+
+            // Integrações: leitura da etiqueta (Claude), fotos e notificação
+            builder.Services.Configure<ClaudeOptions>(builder.Configuration.GetSection("Claude"));
+            builder.Services.AddHttpClient<IExtratorEtiqueta, ExtratorEtiquetaClaude>(c =>
+            {
+                c.BaseAddress = new Uri("https://api.anthropic.com/");
+                c.Timeout = TimeSpan.FromSeconds(60);
+            });
+            builder.Services.AddSingleton<IFotoStorage>(_ =>
+                new FotoStorageLocal(builder.Configuration["Storage:Path"] ?? "storage"));
+            builder.Services.AddScoped<INotificador, NotificadorLog>();
 
             var app = builder.Build();
 

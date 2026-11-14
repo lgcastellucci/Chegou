@@ -4,26 +4,25 @@ namespace Chegou.Api.Domain
 {
     public interface IDbConnectionFactory
     {
-        /// <summary>Devolve uma conexão já aberta. Quem chama é responsável por descartá-la (using).</summary>
-        SqlConnection Abrir();
+        /// <summary>Devolve uma conexão já aberta. Quem chama é responsável por descartá-la (await using).</summary>
+        Task<SqlConnection> AbrirAsync(CancellationToken ct);
     }
 
     public class SqlConnectionFactory(string connectionString) : IDbConnectionFactory
     {
-        public SqlConnection Abrir()
+        public async Task<SqlConnection> AbrirAsync(CancellationToken ct)
         {
             var con = new SqlConnection(connectionString);
             try
             {
-                con.Open();
+                await con.OpenAsync(ct);
                 return con;
             }
             catch
             {
-                con.Dispose();
+                await con.DisposeAsync();
                 throw;
             }
         }
     }
-
 }
