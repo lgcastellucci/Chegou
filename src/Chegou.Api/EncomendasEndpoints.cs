@@ -21,7 +21,7 @@ public static class EncomendasEndpoints
 
     public static void MapEncomendas(this WebApplication app)
     {
-        var g = app.MapGroup("/api/encomendas");
+        var g = app.MapGroup("/api/encomendas").WithTags("Encomendas");
 
         // 1) Foto -> extração -> candidatos (não grava encomenda ainda)
         g.MapPost("/extrair", async (HttpContext http, IFormFile foto, IExtratorEtiqueta extrator,
@@ -75,7 +75,15 @@ public static class EncomendasEndpoints
                 nivel = resultado.Nivel.ToString(),
                 candidatos = resultado.Candidatos
             });
-        }).DisableAntiforgery();
+        })
+        .DisableAntiforgery()
+        .WithName("ExtrairEtiqueta")
+        .WithSummary("Lê a etiqueta de uma foto e sugere o morador")
+        .WithDescription("Recebe a foto (multipart, campo `foto`), extrai destinatário, bloco/apartamento e rastreio, " +
+                         "e devolve `nivel` (Alto/Medio/Baixo) com até 5 `candidatos`. Ainda não grava a encomenda. " +
+                         "Retorna 422 se a leitura falhar (preencher manualmente).")
+        .Produces(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status422UnprocessableEntity);
 
         // 2) Porteiro confirma -> grava, notifica, aprende apelido
         g.MapPost("/", async (HttpContext http, ConfirmarEncomendaRequest req, ChegouDbContext db,
@@ -127,7 +135,14 @@ public static class EncomendasEndpoints
             }
 
             return Results.Created($"/api/encomendas/{enc.Id}", new { enc.Id, Status = enc.Status.ToString(), enc.CodigoRetirada });
-        });
+        })
+        .WithName("ConfirmarEncomenda")
+        .WithSummary("Confirma o morador, registra a encomenda e notifica")
+        .WithDescription("Grava a encomenda, gera o código de retirada e avisa o morador. " +
+                         "Se o porteiro escolheu um morador diferente do sugerido, o nome lido na etiqueta " +
+                         "é guardado como apelido do morador para acertar nas próximas vezes.")
+        .Produces(StatusCodes.Status201Created)
+        .Produces(StatusCodes.Status404NotFound);
 
         // 3) Pendentes na portaria
         g.MapGet("/pendentes", async (HttpContext http, ChegouDbContext db, CancellationToken ct) =>
@@ -146,7 +161,11 @@ public static class EncomendasEndpoints
                 })
                 .ToListAsync(ct);
             return Results.Ok(lista);
-        });
+        })
+        .WithName("ListarEncomendasPendentes")
+        .WithSummary("Lista as encomendas na portaria")
+        .WithDescription("Encomendas com status Recebida ou Notificada, da mais recente para a mais antiga.")
+        .Produces(StatusCodes.Status200OK);
 
         // 4) Retirada com código
         g.MapPost("/{id:long}/retirar", async (HttpContext http, long id, RetirarRequest req,
@@ -165,6 +184,14 @@ public static class EncomendasEndpoints
             enc.RetiradaPorNome = req.RetiradaPorNome;
             await db.SaveChangesAsync(ct);
             return Results.Ok(new { enc.Id, Status = enc.Status.ToString() });
-        });
+        })
+        .WithName("RetirarEncomenda")
+        .WithSummary("Registra a retirada com o código")
+        .WithDescription("Exige o código de retirada de 6 dígitos. 400 se o código estiver errado; " +
+                         "409 se a encomenda já foi finalizada.")
+        .Produces(StatusCodes.Status200OK)
+        .Produces(StatusCodes.Status400BadRequest)
+        .Produces(StatusCodes.Status404NotFound)
+        .Produces(StatusCodes.Status409Conflict);
     }
 }

@@ -21,13 +21,19 @@ docs/                    prompt de extração e regras de matching
 dotnet restore
 dotnet test
 # banco: rode db/schema-encomendas.sql como administrador (cria o banco, o login chegou_app e as tabelas)
+# dados de teste (opcional, só dev): rode db/seed-dev.sql como administrador
 cd src/Chegou.Api
 dotnet user-secrets init
 dotnet user-secrets set "Claude:ApiKey" "<sua-chave>"
 dotnet run
 ```
 
-OpenAPI em `/openapi/v1.json` (ambiente Development).
+## Documentação da API
+
+- Interface interativa (Scalar): `http://localhost:<porta>/scalar`
+- Especificação OpenAPI 3.1: `/openapi/v1.json` (gerada pelo `Microsoft.AspNetCore.OpenApi`, nativo do .NET 10)
+- Disponível em Development. Em produção, ligue com `"Docs": { "Habilitar": true }` no `appsettings.json`.
+- Para documentar um endpoint novo: `.WithSummary(...)`, `.WithDescription(...)` e `.Produces(...)` na rota.
 
 ## Banco de dados
 
