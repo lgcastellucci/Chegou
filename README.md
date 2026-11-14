@@ -20,7 +20,7 @@ docs/                    prompt de extração e regras de matching
 ```bash
 dotnet restore
 dotnet test
-# banco: rode db/schema-encomendas.sql (ou use migrations EF depois)
+# banco: rode db/schema-encomendas.sql como administrador (cria o banco, o login chegou_app e as tabelas)
 cd src/Chegou.Api
 dotnet user-secrets init
 dotnet user-secrets set "Claude:ApiKey" "<sua-chave>"
@@ -28,6 +28,13 @@ dotnet run
 ```
 
 OpenAPI em `/openapi/v1.json` (ambiente Development).
+
+## Banco de dados
+
+- Arquivos em `/databases` (`Chegou.mdf` / `Chegou_log.ldf`).
+- A aplicação usa o login `chegou_app`, com apenas `db_datareader` + `db_datawriter` no banco `Chegou` — sem acesso aos outros bancos do servidor.
+- A senha está versionada de propósito (servidor SQL não público). Troque nos dois lugares se mudar: `db/schema-encomendas.sql` e `appsettings.json`.
+- Se passar a usar migrations do EF, a conta de aplicação precisará de permissão de DDL (ou rode as migrations com outro login).
 
 ## Fluxo da API
 
