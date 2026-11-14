@@ -1,0 +1,6 @@
+@Chegou.Api_HostAddress = http://localhost:5234
+
+GET {{Chegou.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

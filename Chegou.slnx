@@ -1,10 +1,3 @@
 <Solution>
-  <Folder Name="/src/">
-    <Project Path="src/Chegou.Domain/Chegou.Domain.csproj" />
-    <Project Path="src/Chegou.Infrastructure/Chegou.Infrastructure.csproj" />
-    <Project Path="src/Chegou.Api/Chegou.Api.csproj" />
-  </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/Chegou.Tests/Chegou.Tests.csproj" />
-  </Folder>
+  <Project Path="Chegou.Api/Chegou.Api.csproj" />
 </Solution>

@@ -8,7 +8,7 @@ Aviso automático de encomendas para condomínios: o porteiro fotografa a etique
 Chegou.slnx
 src/
   Chegou.Domain          entidades, abstrações e matching (nome x morador) — sem dependências
-  Chegou.Infrastructure  EF Core (SQL Server), extrator via Claude, storage de fotos, notificador
+  Chegou.Infrastructure  repositórios com SQL em texto (Dapper + Microsoft.Data.SqlClient), extrator via Claude, storage de fotos, notificador
   Chegou.Api             Web API com Controllers (.NET 10): Controllers/, Contracts/ (requests/responses)
 tests/Chegou.Tests       testes do matching (xUnit)
 db/schema-encomendas.sql esquema SQL Server
@@ -40,7 +40,8 @@ dotnet run
 - Arquivos em `/databases` (`Chegou.mdf` / `Chegou_log.ldf`).
 - A aplicação usa o login `chegou_app`, com apenas `db_datareader` + `db_datawriter` no banco `Chegou` — sem acesso aos outros bancos do servidor.
 - A senha está versionada de propósito (servidor SQL não público). Troque nos dois lugares se mudar: `db/schema-encomendas.sql` e `appsettings.json`.
-- Se passar a usar migrations do EF, a conta de aplicação precisará de permissão de DDL (ou rode as migrations com outro login).
+- Sem EF e sem migrations: o esquema é mantido em scripts SQL (`db/`). A conta de aplicação não tem DDL, então alterações de estrutura rodam com um login administrador.
+- Todo SQL da aplicação fica em constantes de texto em `src/Chegou.Infrastructure/Repositorios.cs`.
 
 ## Fluxo da API
 
@@ -52,7 +53,7 @@ dotnet run
 ## Pendências conhecidas (MVP)
 
 - [ ] Login/JWT (hoje `X-Condominio-Id` e `X-Usuario-Id` por header — **provisório**)
-- [ ] Migrations do EF Core (hoje o schema vem do .sql)
+- [ ] Controle de versão do esquema (scripts numerados em `db/` ou uma ferramenta como DbUp/Flyway)
 - [ ] Notificação real (FCM push; WhatsApp depois)
 - [ ] Job de retenção: apagar fotos após `Condominio.RetencaoFotoDias` (LGPD)
 - [ ] Limite de tamanho de upload e rate limit
