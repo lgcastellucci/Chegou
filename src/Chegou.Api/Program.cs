@@ -3,7 +3,6 @@ using Chegou.Api;
 using Chegou.Domain.Abstractions;
 using Chegou.Infrastructure;
 using Microsoft.EntityFrameworkCore;
-using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,12 +41,16 @@ builder.Services.AddScoped<INotificador, NotificadorLog>();
 
 var app = builder.Build();
 
-// Documentação: /scalar (interface) e /openapi/v1.json (especificação OpenAPI).
+// Documentação: /swagger (Swagger UI) e /openapi/v1.json (especificação OpenAPI).
 // Em produção só aparece com "Docs:Habilitar": true no appsettings.
 if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Docs:Habilitar"))
 {
     app.MapOpenApi();
-    app.MapScalarApiReference(o => o.WithTitle("Chegou API"));
+    app.UseSwaggerUI(o =>
+    {
+        o.SwaggerEndpoint("/openapi/v1.json", "Chegou API v1");
+        o.DocumentTitle = "Chegou API";
+    });
 }
 
 app.MapGet("/", () => "Chegou API");

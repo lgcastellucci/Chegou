@@ -30,7 +30,7 @@ dotnet run
 
 ## Documentação da API
 
-- Interface interativa (Scalar): `http://localhost:<porta>/scalar`
+- Interface interativa (Swagger UI): `http://localhost:<porta>/swagger`
 - Especificação OpenAPI 3.1: `/openapi/v1.json` (gerada pelo `Microsoft.AspNetCore.OpenApi`, nativo do .NET 10)
 - Disponível em Development. Em produção, ligue com `"Docs": { "Habilitar": true }` no `appsettings.json`.
 - Para documentar um endpoint novo: `.WithSummary(...)`, `.WithDescription(...)` e `.Produces(...)` na rota.
