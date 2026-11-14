@@ -49,6 +49,7 @@ dotnet run
 ```
 
 Exemplos de chamadas prontas em `Chegou.Api/Chegou.Api.http`.
+Collection do Postman com testes automáticos (importa também no Insomnia e no Bruno): `docs/Chegou.postman_collection.json`. A pasta 1 roda de ponta a ponta sem IA.
 
 ## Documentação da API
 
