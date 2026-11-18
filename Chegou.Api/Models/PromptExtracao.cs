@@ -1,4 +1,4 @@
-namespace Chegou.Api.Domain.Integracoes
+namespace Chegou.Api.Models
 {
     public static class PromptExtracao
     {

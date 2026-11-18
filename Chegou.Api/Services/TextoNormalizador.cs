@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Chegou.Api.Domain.Matching
+namespace Chegou.Api.Services
 {
     public static class TextoNormalizador
     {

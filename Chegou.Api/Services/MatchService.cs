@@ -1,4 +1,5 @@
-namespace Chegou.Api.Domain.Matching
+
+namespace Chegou.Api.Services
 {
     public enum NivelMatch { Alto, Medio, Baixo }
 

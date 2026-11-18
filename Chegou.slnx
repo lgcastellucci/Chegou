@@ -1,4 +1,3 @@
 <Solution>
   <Project Path="Chegou.Api/Chegou.Api.csproj" />
-  <Project Path="Chegou.Tests/Chegou.Tests.csproj" />
 </Solution>

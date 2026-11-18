@@ -1,4 +1,5 @@
-namespace Chegou.Api.Domain.Matching
+
+namespace Chegou.Api.Services
 {
     public static class JaroWinkler
     {
