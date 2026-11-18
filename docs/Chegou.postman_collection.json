@@ -1,33 +1,38 @@
 {
   "info": {
     "name": "Chegou API",
-    "description": "Collection de testes da API Chegou.\n\nAntes de rodar: banco criado com db/schema-encomendas.sql e dados de teste com db/seed-dev.sql; API rodando (dotnet run). Ajuste a variável baseUrl se a porta for outra.\n\nTodas as rotas exigem o header X-Condominio-Id com o CÓDIGO do condomínio (coluna CONDOMINIO.Codigo, não o Id do banco). A collection envia o header sozinha a partir da variável {{codigoCondominio}} (padrão: o código de teste do seed).\n\nA pasta 0 testa a identificação do condomínio. A pasta 1 roda inteira sem IA (Run collection > só a pasta 1).",
+    "description": "Collection de testes da API Chegou (versão simples/didática).\n\nAntes de rodar: banco criado com db/schema-encomendas.sql, procedures com db/procedures-condominio.sql e dados de teste com db/seed-dev.sql; API rodando (dotnet run). Ajuste a variável baseUrl se a porta for outra.\n\nTodas as rotas exigem o header X-Condominio-Id com o CÓDIGO do condomínio (coluna Condominio.Codigo, não o Id do banco). A collection envia o header sozinha a partir da variável {{codigoCondominio}} (padrão: o código de teste do seed).\n\nNesta versão todo erro volta como 400 com uma mensagem em texto simples (não há 401, 404 nem 409).\n\nPasta 0: identificação do condomínio. Pasta 1: fluxo completo sem IA. Pasta 2: leitura da etiqueta (precisa da variável imgBase64 e de chave da Groq/Claude). Pasta 3: aprendizado de apelido. Pasta 4: casos de erro.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "X-Condominio-Id",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{codigoCondominio}}",
+        "type": "string"
+      },
+      {
+        "key": "in",
+        "value": "header",
+        "type": "string"
+      }
+    ]
   },
   "item": [
     {
       "name": "0. Identificação do condomínio",
-      "description": "Confere a regra do header X-Condominio-Id: sem header ou com código errado a API responde 401.",
+      "description": "Regra do header X-Condominio-Id. Nesta versão da API todo erro volta como 400 com uma mensagem em texto (não há 401).",
       "item": [
         {
-          "name": "0.1 Sem o header (401)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"401 Unauthorized\", () => pm.response.to.have.status(401));",
-                  "pm.test(\"Mensagem cita o header\", () => pm.expect(pm.response.json().erro).to.include(\"X-Condominio-Id\"));"
-                ]
-              }
-            }
-          ],
+          "name": "0.1 Sem o header (400)",
           "request": {
             "method": "GET",
-            "auth": {
-              "type": "noauth"
-            },
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/encomendas/pendentes",
@@ -39,24 +44,40 @@
                 "encomendas",
                 "pendentes"
               ]
+            },
+            "auth": {
+              "type": "noauth"
             }
-          }
-        },
-        {
-          "name": "0.2 Código inexistente (401)",
+          },
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"401 Unauthorized\", () => pm.response.to.have.status(401));"
+                  "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Mensagem de header ausente\", () => pm.expect(pm.response.text()).to.include(\"Header não encontrado\"));"
                 ]
               }
             }
-          ],
+          ]
+        },
+        {
+          "name": "0.2 Código inexistente (400)",
           "request": {
             "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/encomendas/pendentes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "encomendas",
+                "pendentes"
+              ]
+            },
             "auth": {
               "type": "apikey",
               "apikey": [
@@ -76,7 +97,25 @@
                   "type": "string"
                 }
               ]
-            },
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Condomínio não encontrado\", () => pm.expect(pm.response.text()).to.include(\"Condominio não encontrado\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.3 Tentativa de SQL injection no header (400)",
+          "request": {
+            "method": "GET",
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/encomendas/pendentes",
@@ -88,23 +127,44 @@
                 "encomendas",
                 "pendentes"
               ]
-            }
-          }
-        },
-        {
-          "name": "0.3 Código válido (200)",
+            },
+            "auth": {
+              "type": "apikey",
+              "apikey": [
+                {
+                  "key": "key",
+                  "value": "X-Condominio-Id",
+                  "type": "string"
+                },
+                {
+                  "key": "value",
+                  "value": "x' OR '1'='1",
+                  "type": "string"
+                },
+                {
+                  "key": "in",
+                  "value": "header",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "O código é normalizado (só letras, números e hífen) antes de entrar no SQL. Este teste garante que aspas e espaços não passam."
+          },
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"Devolve uma lista\", () => pm.expect(pm.response.json()).to.be.an(\"array\"));"
+                  "pm.test(\"400 Bad Request (não pode devolver dados)\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Condomínio não encontrado\", () => pm.expect(pm.response.text()).to.include(\"Condominio não encontrado\"));"
                 ]
               }
             }
-          ],
+          ]
+        },
+        {
+          "name": "0.4 Código válido (200)",
           "request": {
             "method": "GET",
             "header": [],
@@ -120,12 +180,25 @@
               ]
             },
             "description": "Usa o código da variável {{codigoCondominio}} (auth da collection)."
-          }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Devolve uma lista\", () => pm.expect(pm.response.json()).to.be.an(\"array\"));"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
     {
       "name": "1. Fluxo completo (sem IA)",
+      "description": "Roda sem chave de IA. Exige o seed-dev.sql aplicado (morador 1 = Maria da Silva, bloco A, apto 101). Execute em ordem (Run collection).",
       "item": [
         {
           "name": "1.1 Listar pendentes",
@@ -158,7 +231,7 @@
           ]
         },
         {
-          "name": "1.2 Confirmar encomenda (manual)",
+          "name": "1.2 Registrar encomenda (manual)",
           "request": {
             "method": "POST",
             "header": [
@@ -168,13 +241,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/encomendas",
+              "raw": "{{baseUrl}}/api/encomendas/registrar",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "encomendas"
+                "encomendas",
+                "registrar"
               ]
             },
             "body": {
@@ -186,7 +260,7 @@
                 }
               }
             },
-            "description": "Usa o morador 1 (Maria da Silva, bloco A apto 101) do seed-dev.sql. Guarda o id e o código de retirada nas variáveis da collection."
+            "description": "Usa o morador 1 do seed-dev.sql. Guarda o id e o código de retirada nas variáveis da collection."
           },
           "event": [
             {
@@ -194,14 +268,14 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
                   "const r = pm.response.json();",
-                  "pm.test(\"Tem id e código de retirada de 6 dígitos\", () => {",
-                  "  pm.expect(r.id).to.be.a(\"number\");",
+                  "pm.test(\"Tem idEncomenda e código de retirada de 6 dígitos\", () => {",
+                  "  pm.expect(r.idEncomenda).to.be.a(\"number\");",
                   "  pm.expect(r.codigoRetirada).to.match(/^\\d{6}$/);",
                   "});",
                   "pm.test(\"Morador aceita notificação -> NOTIFICADA\", () => pm.expect(r.status).to.eql(\"NOTIFICADA\"));",
-                  "pm.collectionVariables.set(\"encomendaId\", r.id);",
+                  "pm.collectionVariables.set(\"encomendaId\", r.idEncomenda);",
                   "pm.collectionVariables.set(\"codigoRetirada\", r.codigoRetirada);"
                 ]
               }
@@ -284,7 +358,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
-                  "pm.test(\"Mensagem de código inválido\", () => pm.expect(pm.response.json().erro).to.include(\"inválido\"));"
+                  "pm.test(\"Código de retirada inválido\", () => pm.expect(pm.response.text()).to.include(\"inválido\"));"
                 ]
               }
             }
@@ -329,14 +403,15 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"Status RETIRADA\", () => pm.expect(pm.response.json().status).to.eql(\"RETIRADA\"));"
+                  "const r = pm.response.json();",
+                  "pm.test(\"Status RETIRADA\", () => { pm.expect(r.status).to.eql(\"RETIRADA\"); pm.expect(r.idEncomenda).to.eql(Number(pm.collectionVariables.get(\"encomendaId\"))); });"
                 ]
               }
             }
           ]
         },
         {
-          "name": "1.6 Retirar de novo (409)",
+          "name": "1.6 Retirar de novo (400)",
           "request": {
             "method": "POST",
             "header": [
@@ -373,7 +448,8 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"409 Conflict\", () => pm.response.to.have.status(409));"
+                  "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Encomenda já retirada\", () => pm.expect(pm.response.text()).to.include(\"já retirada\"));"
                 ]
               }
             }
@@ -409,15 +485,56 @@
             }
           ]
         }
-      ],
-      "description": "Roda sem chave do Claude. Exige o seed-dev.sql aplicado. Execute em ordem (Run collection)."
+      ]
     },
     {
       "name": "2. Leitura da etiqueta (usa a IA)",
+      "description": "Requer chave da Groq (ou do Claude) no appsettings e uma foto real de etiqueta em base64 na variável {{imgBase64}}. Fluxo igual ao do app: ler a etiqueta, registrar com o morador sugerido e retirar.",
       "item": [
         {
-          "name": "2.1 Extrair etiqueta (foto)",
+          "name": "2.1 Ler a etiqueta (foto em base64)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/encomendas/etiqueta",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "encomendas",
+                "etiqueta"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"imgBase64\": \"{{imgBase64}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Para gerar o base64 no PowerShell e copiar para a área de transferência:\n[Convert]::ToBase64String([IO.File]::ReadAllBytes(\"etiqueta.jpg\")) | Set-Clipboard\n\nCole o resultado no valor atual (current value) da variável imgBase64. Só o texto base64, sem o prefixo data:image. A Groq aceita imagens de até 4 MB em base64: reduza a foto antes. Se a leitura falhar, a API responde 400 com a mensagem."
+          },
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"imgBase64\")) {",
+                  "  throw new Error(\"Defina a variável imgBase64 da collection (foto da etiqueta em base64, sem o prefixo data:image).\");",
+                  "}"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -425,7 +542,8 @@
                 "exec": [
                   "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
                   "const r = pm.response.json();",
-                  "pm.test(\"Devolve nível e candidatos\", () => {",
+                  "pm.test(\"Devolve fotoPath, nível e candidatos\", () => {",
+                  "  pm.expect(r.fotoPath).to.be.a(\"string\").and.not.empty;",
                   "  pm.expect([\"Alto\", \"Medio\", \"Baixo\"]).to.include(r.nivel);",
                   "  pm.expect(r.candidatos).to.be.an(\"array\");",
                   "});",
@@ -440,37 +558,10 @@
                 ]
               }
             }
-          ],
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "formdata",
-              "formdata": [
-                {
-                  "key": "foto",
-                  "type": "file",
-                  "src": [],
-                  "description": "Selecione a foto da etiqueta (JPG/PNG)"
-                }
-              ]
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/encomendas/extrair",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "encomendas",
-                "extrair"
-              ]
-            },
-            "description": "Exige Claude:ApiKey configurada. Escolha uma foto no campo 'foto'. Sem chave ou com falha na leitura a API responde 422 com o caminho da foto salvo."
-          }
+          ]
         },
         {
-          "name": "2.2 Confirmar com o resultado da extração",
+          "name": "2.2 Registrar com o morador sugerido",
           "request": {
             "method": "POST",
             "header": [
@@ -480,13 +571,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/encomendas",
+              "raw": "{{baseUrl}}/api/encomendas/registrar",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "encomendas"
+                "encomendas",
+                "registrar"
               ]
             },
             "body": {
@@ -498,7 +590,7 @@
                 }
               }
             },
-            "description": "Usa o primeiro candidato sugerido pela extração (variáveis preenchidas em 2.1). Depois dá para seguir com 1.4 / 1.5 para retirar."
+            "description": "Usa o primeiro candidato sugerido na leitura (variáveis preenchidas em 2.1)."
           },
           "event": [
             {
@@ -506,23 +598,21 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"201 Created\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
                   "const r = pm.response.json();",
-                  "pm.collectionVariables.set(\"encomendaId\", r.id);",
+                  "pm.test(\"Tem idEncomenda e código de retirada\", () => {",
+                  "  pm.expect(r.idEncomenda).to.be.a(\"number\");",
+                  "  pm.expect(r.codigoRetirada).to.match(/^\\d{6}$/);",
+                  "});",
+                  "pm.collectionVariables.set(\"encomendaId\", r.idEncomenda);",
                   "pm.collectionVariables.set(\"codigoRetirada\", r.codigoRetirada);"
                 ]
               }
             }
           ]
-        }
-      ],
-      "description": "Requer Claude:ApiKey (user-secrets) e uma foto real de etiqueta."
-    },
-    {
-      "name": "3. Aprendizado de apelido",
-      "item": [
+        },
         {
-          "name": "3.1 Confirmar escolhendo morador diferente do sugerido",
+          "name": "2.3 Retirar com o código recebido",
           "request": {
             "method": "POST",
             "header": [
@@ -532,13 +622,65 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/encomendas",
+              "raw": "{{baseUrl}}/api/encomendas/{{encomendaId}}/retirar",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "encomendas"
+                "encomendas",
+                "{{encomendaId}}",
+                "retirar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"{{codigoRetirada}}\",\n  \"retiradaPorNome\": \"Teste Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Status RETIRADA\", () => pm.expect(pm.response.json().status).to.eql(\"RETIRADA\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Aprendizado de apelido",
+      "description": "Simula o porteiro escolhendo manualmente um morador diferente do sugerido. O nome lido na etiqueta vira apelido do morador. Confira no banco: SELECT * FROM MoradorApelido;",
+      "item": [
+        {
+          "name": "3.1 Registrar escolhendo morador diferente do sugerido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/encomendas/registrar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "encomendas",
+                "registrar"
               ]
             },
             "body": {
@@ -550,7 +692,7 @@
                 }
               }
             },
-            "description": "Simula o porteiro escolhendo manualmente o morador 2 (João Pedro Oliveira). O nome lido ('JP Oliveira') vira apelido dele. Confira no banco: SELECT * FROM MoradorApelido;"
+            "description": "Usa o morador 2 (João Pedro Oliveira) do seed. O porteiro escolhe um morador diferente do sugerido (moradorSugeridoId nulo), então o nome lido na etiqueta ('JP Oliveira') é gravado em MoradorApelido como 'JP OLIVEIRA'. Confira no banco: SELECT * FROM MoradorApelido;"
           },
           "event": [
             {
@@ -558,20 +700,19 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"201 Created\", () => pm.response.to.have.status(201));"
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const r = pm.response.json();",
+                  "  pm.collectionVariables.set(\"encomendaIdApelido\", r.idEncomenda);",
+                  "  pm.collectionVariables.set(\"codigoApelido\", r.codigoRetirada);",
+                  "}"
                 ]
               }
             }
           ]
-        }
-      ],
-      "description": "Para ver o efeito, confira a tabela MoradorApelido no SQL Server depois de rodar."
-    },
-    {
-      "name": "4. Casos de erro",
-      "item": [
+        },
         {
-          "name": "4.1 Confirmar com morador inexistente (404)",
+          "name": "3.2 Retirar a encomenda do teste (limpa os pendentes)",
           "request": {
             "method": "POST",
             "header": [
@@ -581,13 +722,63 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/encomendas",
+              "raw": "{{baseUrl}}/api/encomendas/{{encomendaIdApelido}}/retirar",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "encomendas"
+                "encomendas",
+                "{{encomendaIdApelido}}",
+                "retirar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"{{codigoApelido}}\",\n  \"retiradaPorNome\": \"Teste Postman\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Casos de erro",
+      "item": [
+        {
+          "name": "4.1 Registrar com morador inexistente (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/encomendas/registrar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "encomendas",
+                "registrar"
               ]
             },
             "body": {
@@ -606,15 +797,15 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"404 Not Found\", () => pm.response.to.have.status(404));",
-                  "pm.test(\"Mensagem de morador não encontrado\", () => pm.expect(pm.response.json().erro).to.include(\"Morador\"));"
+                  "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Morador não encontrado\", () => pm.expect(pm.response.text()).to.include(\"Morador não encontrado\"));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "4.2 Retirar encomenda inexistente (404)",
+          "name": "4.2 Retirar encomenda inexistente (400)",
           "request": {
             "method": "POST",
             "header": [
@@ -651,14 +842,15 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"404 Not Found\", () => pm.response.to.have.status(404));"
+                  "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Encomenda não encontrada\", () => pm.expect(pm.response.text()).to.include(\"Encomenda não encontrada\"));"
                 ]
               }
             }
           ]
         },
         {
-          "name": "4.3 Confirmar com corpo inválido (400)",
+          "name": "4.3 Registrar com corpo vazio (400)",
           "request": {
             "method": "POST",
             "header": [
@@ -668,13 +860,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/encomendas",
+              "raw": "{{baseUrl}}/api/encomendas/registrar",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "encomendas"
+                "encomendas",
+                "registrar"
               ]
             },
             "body": {
@@ -698,6 +891,50 @@
               }
             }
           ]
+        },
+        {
+          "name": "4.4 Ler etiqueta sem imagem (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/encomendas/etiqueta",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "encomendas",
+                "etiqueta"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"imgBase64\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Imagem não informada\", () => pm.expect(pm.response.text()).to.include(\"Imagem não informada\"));"
+                ]
+              }
+            }
+          ]
         }
       ]
     }
@@ -706,6 +943,14 @@
     {
       "key": "baseUrl",
       "value": "http://localhost:5234"
+    },
+    {
+      "key": "codigoCondominio",
+      "value": "DEV-CHEGOU-CONDOMINIO-TESTE-0001"
+    },
+    {
+      "key": "imgBase64",
+      "value": ""
     },
     {
       "key": "moradorId",
@@ -736,28 +981,12 @@
       "value": ""
     },
     {
-      "key": "codigoCondominio",
-      "value": "DEV-CHEGOU-CONDOMINIO-TESTE-0001"
+      "key": "encomendaIdApelido",
+      "value": ""
+    },
+    {
+      "key": "codigoApelido",
+      "value": ""
     }
-  ],
-  "auth": {
-    "type": "apikey",
-    "apikey": [
-      {
-        "key": "key",
-        "value": "X-Condominio-Id",
-        "type": "string"
-      },
-      {
-        "key": "value",
-        "value": "{{codigoCondominio}}",
-        "type": "string"
-      },
-      {
-        "key": "in",
-        "value": "header",
-        "type": "string"
-      }
-    ]
-  }
+  ]
 }

@@ -116,7 +116,7 @@ namespace Chegou.Api.Controllers.Encomendas
             {
                 sql.Clear();
                 sql.Append(" IF NOT EXISTS(SELECT 1 FROM MoradorApelido WHERE MoradorId = " + morador.Id + " AND ApelidoNorm = '" + novoApelido + "') ");
-                sql.Append("   INSERT INTO MoradorApelido(MoradorId, ApelidoNorm, Origem) VALUES(@" + morador.Id + ", '" + novoApelido + "', 'CORRECAO') ");
+                sql.Append("   INSERT INTO MoradorApelido(MoradorId, ApelidoNorm, Origem) VALUES(" + morador.Id + ", '" + novoApelido + "', 'CORRECAO') ");
 
                 await banco.ExecutartransactionAsync(sql.ToString(), ct);
             }

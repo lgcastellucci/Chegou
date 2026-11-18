@@ -1,5 +1,6 @@
 -- MVP Chegou - Encomendas de Condomínio (SQL Server)
 -- Multi-tenant: todo registro carrega CondominioId.
+-- Datas e horas em HORA LOCAL do servidor SQL (GETDATE), não em UTC.
 
 -- Arquivos do banco em /databases (a pasta precisa existir e ser gravável pelo SQL Server).
 IF DB_ID(N'Chegou') IS NULL
@@ -46,7 +47,7 @@ CREATE TABLE Condominio (
     Codigo          NVARCHAR(64)  NOT NULL,  -- segredo do condomínio (header X-Condominio-Id); NÃO é o Id
     RetencaoFotoDias INT NOT NULL DEFAULT 7,  -- LGPD: apagar foto N dias após retirada
     Ativo           BIT NOT NULL DEFAULT 1,
-    CriadoEm        DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    CriadoEm        DATETIME2 NOT NULL DEFAULT GETDATE(),
     CONSTRAINT UQ_Condominio_Codigo UNIQUE (Codigo)
 );
 
@@ -100,7 +101,7 @@ CREATE TABLE Encomenda (
     MatchManual     BIT NOT NULL DEFAULT 0,      -- porteiro escolheu/corrigiu
 
     Status          NVARCHAR(20) NOT NULL DEFAULT 'RECEBIDA', -- RECEBIDA | NOTIFICADA | RETIRADA | DEVOLVIDA
-    RecebidaEm      DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    RecebidaEm      DATETIME2 NOT NULL DEFAULT GETDATE(),
     NotificadaEm    DATETIME2 NULL,
     CodigoRetirada  CHAR(6) NULL,                -- senha/QR para retirada
     RetiradaEm      DATETIME2 NULL,
