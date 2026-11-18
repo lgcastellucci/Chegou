@@ -36,14 +36,24 @@ namespace Chegou.Api.Controllers
 
 
         [HttpPost("registrar")]
-        public async Task<ActionResult> FuncRegistrar( CancellationToken ct)
+        public async Task<ActionResult<Registrar.Response>> FuncRegistrar([FromBody] Registrar.Request req, CancellationToken ct)
         {
-          // var registrar = new RegistrarEncomenda(request.CondominioCodigo, request.MoradorId, request.UnidadeId, request.Transportadora, request.Rastreio);
-          // var retRegistrar = await registrar.Executar(ct);
-          // if (!string.IsNullOrWhiteSpace(retRegistrar.Erro))
-          //     return BadRequest(retRegistrar.Erro);
-            return Ok();
+            //Request Headers
+            //X-Condominio-Id: DEV-CHEGOU-CONDOMINIO-TESTE-0001
+            var condominioCodigo = Request.Headers["X-Condominio-Id"].ToString();
+
+            if (string.IsNullOrWhiteSpace(condominioCodigo))
+                return BadRequest("Header não encontrado");
+
+            var registrar = new Registrar(condominioCodigo);
+            var retRegistrar = await registrar.Executar(req, ct);
+
+            if (!string.IsNullOrWhiteSpace(retRegistrar.erro))
+                return BadRequest(retRegistrar.erro);
+
+            return Ok(retRegistrar.response);
         }
+
 
         [HttpGet("pendentes")]
         public async Task<ActionResult<List<Encomenda>>> FuncPendentes(CancellationToken ct)
@@ -64,13 +74,17 @@ namespace Chegou.Api.Controllers
             return Ok(retPendentes.encomendas);
         }
 
+
         [HttpPost("{id:long}/retirar")]
         public async Task<ActionResult> FuncRetirar(long id, CancellationToken ct)
         {
-          //  var retirar = new RetirarEncomenda(id, request.CondominioCodigo);
-          //  var retRetirar = await retirar.Executar(ct);
-          //  if (!string.IsNullOrWhiteSpace(retRetirar.Erro))
-          //      return BadRequest(retRetirar.Erro);
+            //Request Headers
+            //X-Condominio-Id: DEV-CHEGOU-CONDOMINIO-TESTE-0001
+            var condominioCodigo = Request.Headers["X-Condominio-Id"].ToString();
+
+            if (string.IsNullOrWhiteSpace(condominioCodigo))
+                return BadRequest("Header não encontrado");
+
             return Ok();
         }
     }

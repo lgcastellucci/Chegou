@@ -24,6 +24,23 @@ namespace Chegou.Api.Services
             return Regex.Replace(SemAcento(texto).ToUpperInvariant(), @"[^A-Z0-9]", "");
         }
 
+        public static string NormalizarNumero(string? texto)
+        {
+            if (string.IsNullOrWhiteSpace(texto)) return "";
+            return Regex.Replace(SemAcento(texto).ToUpperInvariant(), @"[^0-9]", "");
+        }
+
+        /// <summary>
+        /// Para o código do condomínio (header X-Condominio-Id): maiúsculas, sem acento e só letras, números e hífen
+        /// ("dev-chegou-0001" -> "DEV-CHEGOU-0001"). Ao contrário de Normalizar, não remove palavras como DA/DE/DO.
+        /// Qualquer outro caractere (aspas, espaço, ponto e vírgula...) é descartado.
+        /// </summary>
+        public static string NormalizarCondominioCodigo(string? texto)
+        {
+            if (string.IsNullOrWhiteSpace(texto)) return "";
+            return Regex.Replace(SemAcento(texto).ToUpperInvariant(), @"[^A-Z0-9\-]", "");
+        }
+
         private static string SemAcento(string texto)
         {
             var d = texto.Normalize(NormalizationForm.FormD);

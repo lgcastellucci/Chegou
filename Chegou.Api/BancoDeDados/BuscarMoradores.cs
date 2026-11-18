@@ -8,6 +8,15 @@ namespace Chegou.Api.BancoDeDados
     {
         public static async Task<List<MoradorBusca>> BuscarMoradores(string condominioId, string unidadeId, CancellationToken ct)
         {
+            var retorno = new List<MoradorBusca>();
+
+            condominioId = TextoNormalizador.NormalizarNumero(condominioId);
+            if (string.IsNullOrWhiteSpace(condominioId))
+                return retorno;
+
+            // Não checar => vazio = todos os moradores do condomínio
+            unidadeId = TextoNormalizador.NormalizarNumero(unidadeId);   
+
             var sql = new StringBuilder();
 
             sql.Clear();
@@ -48,7 +57,9 @@ namespace Chegou.Api.BancoDeDados
                 }
             }
 
-            return moradores.Select(m => new MoradorBusca(m.Id, m.UnidadeId, m.Nome, m.NomeNorm, apelidos.TryGetValue(m.Id, out var a) ? a : new List<string>())).ToList();
+            retorno = moradores.Select(m => new MoradorBusca(m.Id, m.UnidadeId, m.Nome, m.NomeNorm, apelidos.TryGetValue(m.Id, out var a) ? a : new List<string>())).ToList();
+
+            return retorno;
         }
 
     }

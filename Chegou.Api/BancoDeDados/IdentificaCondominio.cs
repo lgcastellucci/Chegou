@@ -7,7 +7,13 @@ namespace Chegou.Api.BancoDeDados
     {
         public static async Task<string> DevolveCondominioId(string condominioCodigo, CancellationToken ct)
         {
+            condominioCodigo = TextoNormalizador.NormalizarCondominioCodigo(condominioCodigo);
+            if (string.IsNullOrWhiteSpace(condominioCodigo))
+                return "";
+
             var sql = new StringBuilder();
+
+            sql.Clear();
             sql.Append(" SELECT Id ");
             sql.Append(" FROM Condominio ");
             sql.Append(" WHERE Codigo = '" + condominioCodigo + "'");
