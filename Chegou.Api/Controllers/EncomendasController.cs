@@ -54,7 +54,13 @@ namespace Chegou.Api.Controllers
             return Ok(retRegistrar.response);
         }
 
-
+        /// <summary>
+        /// Obtém as encomendas pendentes do condomínio informado no cabeçalho da solicitação.
+        /// </summary>
+        /// <remarks>A solicitação deve incluir o cabeçalho X-Condominio-Id.</remarks>
+        /// <param name="ct">Token para cancelar a operação.</param>
+        /// <returns>As encomendas pendentes, ou uma resposta de erro se o cabeçalho do condomínio estiver ausente ou ocorrer um
+        /// erro na consulta.</returns>
         [HttpGet("pendentes")]
         public async Task<ActionResult<List<Encomenda>>> FuncPendentes(CancellationToken ct)
         {
@@ -74,9 +80,15 @@ namespace Chegou.Api.Controllers
             return Ok(retPendentes.encomendas);
         }
 
-
+        /// <summary>
+        /// Retira a encomenda identificada no condomínio informado.
+        /// </summary>
+        /// <param name="id">Identificador da encomenda a retirar.</param>
+        /// <param name="ct">Token para cancelamento da operação.</param>
+        /// <returns>Resultado da operação: 200 com a resposta da retirada ou 400 quando o cabeçalho do condomínio estiver
+        /// ausente ou ocorrer um erro.</returns>
         [HttpPost("{id:long}/retirar")]
-        public async Task<ActionResult> FuncRetirar(long id, CancellationToken ct)
+        public async Task<ActionResult> FuncRetirar(long id, [FromBody] Retirar.Request req, CancellationToken ct)
         {
             //Request Headers
             //X-Condominio-Id: DEV-CHEGOU-CONDOMINIO-TESTE-0001
@@ -85,7 +97,13 @@ namespace Chegou.Api.Controllers
             if (string.IsNullOrWhiteSpace(condominioCodigo))
                 return BadRequest("Header não encontrado");
 
-            return Ok();
+            var retirar = new Retirar(condominioCodigo);
+            var retRetirar = await retirar.Executar(id, req, ct);
+
+            if (!string.IsNullOrWhiteSpace(retRetirar.erro))
+                return BadRequest(retRetirar.erro);
+
+            return Ok(retRetirar.response);
         }
     }
 }

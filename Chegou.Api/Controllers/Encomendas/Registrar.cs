@@ -97,7 +97,7 @@ namespace Chegou.Api.Controllers.Encomendas
             sql.Append((request.scoreMatch is null ? "NULL" : request.scoreMatch.Value.ToString("F2").Replace(",", ".")) + ", "); // 3 casas, 2 decimais
             sql.Append((manual ? 1 : 0) + ", ");
             sql.Append("'RECEBIDA'" + ", ");
-            sql.Append("GETUTCDATE()" + ", ");
+            sql.Append("GETDATE()" + ", ");
             sql.Append("'" + codigo + "'");
             sql.Append(" ) ");
 
@@ -130,7 +130,7 @@ namespace Chegou.Api.Controllers.Encomendas
                 //await notificador.NotificarAsync(morador, id, codigo, ct);
 
                 sql.Clear();
-                sql.Append(" UPDATE Encomenda SET Status = 'NOTIFICADA', NotificadaEm = GETUTCDATE() WHERE Id = " + idEncomenda);
+                sql.Append(" UPDATE Encomenda SET Status = 'NOTIFICADA', NotificadaEm = GETDATE() WHERE Id = " + idEncomenda);
                 await banco.ExecutarAsync(sql.ToString(), ct);
                 status = "NOTIFICADA";
             }
