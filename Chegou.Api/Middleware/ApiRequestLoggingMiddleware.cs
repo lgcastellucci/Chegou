@@ -89,28 +89,21 @@ namespace Chegou.Api.Middleware
 
             const string sql = """
                 INSERT INTO ApiLog
-                    (RequestId, Metodo, Caminho, StatusCode, DuracaoMs, CondominioId,
-                     HeadersRequest, HeadersResponse, RequestBody, ResponseBody)
-                SELECT
-                    @RequestId, @Metodo, @Caminho, @StatusCode, @DuracaoMs,
-                    (SELECT TOP (1) Id FROM Condominio WHERE Codigo = @CondominioCodigo),
-                    @HeadersRequest, @HeadersResponse, @RequestBody, @ResponseBody;
+                    (RequestId, Metodo, Caminho, HeadersRequest, RequestBody, HeadersResponse, ResponseBody, StatusCode, DuracaoMs)
+                VALUES
+                    (@RequestId, @Metodo, @Caminho, @HeadersRequest, @RequestBody, @HeadersResponse, @ResponseBody, @StatusCode, @DuracaoMs)
                 """;
 
             await using var command = new SqlCommand(sql, connection);
             command.Parameters.Add("@RequestId", SqlDbType.NVarChar, 256).Value = Limitar(context.TraceIdentifier, 256);
             command.Parameters.Add("@Metodo", SqlDbType.NVarChar, 20).Value = Limitar(context.Request.Method, 20);
             command.Parameters.Add("@Caminho", SqlDbType.NVarChar, 2048).Value = Limitar(context.Request.Path.Value ?? "/", 2048);
+            command.Parameters.Add("@HeadersRequest", SqlDbType.NVarChar, -1).Value = headersRequest;
+            command.Parameters.Add("@RequestBody", SqlDbType.NVarChar, -1).Value = (object?)request ?? DBNull.Value;
+            command.Parameters.Add("@HeadersResponse", SqlDbType.NVarChar, -1).Value = headersResponse;
+            command.Parameters.Add("@ResponseBody", SqlDbType.NVarChar, -1).Value = response;
             command.Parameters.Add("@StatusCode", SqlDbType.Int).Value = context.Response.StatusCode;
             command.Parameters.Add("@DuracaoMs", SqlDbType.BigInt).Value = duracaoMs;
-            command.Parameters.Add("@HeadersRequest", SqlDbType.NVarChar, -1).Value = headersRequest;
-            command.Parameters.Add("@HeadersResponse", SqlDbType.NVarChar, -1).Value = headersResponse;
-            command.Parameters.Add("@RequestBody", SqlDbType.NVarChar, -1).Value = (object?)request ?? DBNull.Value;
-            command.Parameters.Add("@ResponseBody", SqlDbType.NVarChar, -1).Value = response;
-
-            var codigoCondominio = context.Request.Headers["X-Condominio-Id"].ToString();
-            command.Parameters.Add("@CondominioCodigo", SqlDbType.NVarChar, 64).Value =
-                codigoCondominio.Length is > 0 and <= 64 ? codigoCondominio : DBNull.Value;
 
             await command.ExecuteNonQueryAsync(CancellationToken.None);
         }
