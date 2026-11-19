@@ -51,3 +51,35 @@ BEGIN
     WHERE Id = @CondominioId;
 END
 GO
+
+-- Gera o cadastro das unidades do condominio, com base na quantidade de andates e unidades por andar.
+-- Uso:  EXEC dbo.CondominioCadastrarUnidades @CondominioId = 1, @Andares = 20, @UnidadesPorAndar = 4;
+-- Devolve: Id, CondominioId, Bloco, Numero, BlocoNorm, NumeroNorm
+CREATE OR ALTER PROCEDURE dbo.CondominioCadastrarUnidades
+    @CondominioId INT,
+    @Andares INT,
+    @UnidadesPorAndar INT
+    AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @andar INT = 1
+    DECLARE @unidade INT = 1
+    WHILE @andar <= @Andares
+    BEGIN
+    	SET @unidade = 1
+    	WHILE @unidade <= @UnidadesPorAndar
+    	BEGIN
+		    DECLARE @numero VARCHAR(10) = CAST(@andar AS VARCHAR(10)) + CAST(@unidade AS VARCHAR(10))
+		    DECLARE @numeroNorm VARCHAR(10) = CAST(@andar AS VARCHAR(10)) + CAST(@unidade AS VARCHAR(10))
+		    INSERT INTO Unidade (CondominioId, Numero, NumeroNorm) VALUES (@CondominioId, @numero, @numeroNorm)
+		    SET @unidade = @unidade + 1
+	    END
+	    SET @andar = @andar + 1
+    END
+
+    SELECT Id, CondominioId, Bloco, Numero, BlocoNorm, NumeroNorm
+    FROM Unidade
+    WHERE CondominioId = @CondominioId;
+END
+GO

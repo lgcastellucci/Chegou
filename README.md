@@ -185,6 +185,12 @@ Corpo: `{ "codigo": "889841", "retiradaPorNome": "Maria da Silva" }`. Resposta 2
   DROP DATABASE [Chegou];
   ```
 
+## Log das chamadas
+
+- A tabela `ApiLog` guarda os cabeçalhos da requisição e da resposta em JSON e os corpos como texto, além da rota, status e duração. Os valores dos cabeçalhos `Authorization`, `Proxy-Authorization`, `Cookie`, `Set-Cookie` e `X-Condominio-Id` são ocultados; o condomínio identificado é salvo pelo seu Id. O log não inclui a query string. Se a leitura do corpo da requisição falhar, ele fica nulo e a falha é registrada no logger da aplicação. Em exceções não tratadas, o corpo registrado é apenas o que a aplicação já escreveu antes da exceção.
+- **Atenção:** os corpos podem conter fotos em base64, dados pessoais e códigos de retirada. O log pode crescer rapidamente e manter cópias das fotos depois que os arquivos originais forem apagados. Restrinja o acesso à tabela e defina uma política de retenção e exclusão adequada à LGPD. Os corpos são lidos como texto UTF-8; esse log não é adequado para dados binários.
+
+
 ## Configuração (`Chegou.Api/appsettings.json`)
 
 | Chave | Para quê |

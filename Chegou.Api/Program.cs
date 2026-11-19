@@ -14,6 +14,7 @@ namespace Chegou.Api
 
             // Configure the HTTP request pipeline.
 
+            app.UseMiddleware<Middleware.ApiRequestLoggingMiddleware>();
             app.UseAuthorization();
 
 

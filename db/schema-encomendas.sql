@@ -110,3 +110,19 @@ CREATE TABLE Encomenda (
 );
 CREATE INDEX IX_Encomenda_Pendentes ON Encomenda(CondominioId, Status, RecebidaEm DESC);
 CREATE INDEX IX_Encomenda_Rastreio ON Encomenda(CondominioId, Rastreio);
+
+
+CREATE TABLE dbo.ApiLog (
+	Id              BIGINT IDENTITY PRIMARY KEY,
+	RequestId       NVARCHAR(256) NOT NULL,
+	Metodo          NVARCHAR(20) NOT NULL,
+	Caminho         NVARCHAR(2048) NOT NULL,
+	HeadersRequest  NVARCHAR(MAX) NULL,
+	RequestBody     NVARCHAR(MAX) NULL,
+	HeadersResponse NVARCHAR(MAX) NULL,
+	ResponseBody    NVARCHAR(MAX) NULL,
+	StatusCode      INT NOT NULL,
+	DuracaoMs       BIGINT NOT NULL,
+	CriadoEm        DATETIME2 NOT NULL DEFAULT GETDATE()
+);
+CREATE INDEX IX_ApiLog_CriadoEm ON dbo.ApiLog(CriadoEm DESC);
