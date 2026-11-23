@@ -9,7 +9,7 @@ Esta é a versão **simples e didática** da API (POC): sem injeção de depend�
 1. O app envia a foto da etiqueta em base64 (`POST /api/encomendas/etiqueta`).
 2. A API salva a foto, pede à IA (Groq ou Claude) para ler a etiqueta e procura a unidade e os moradores no banco.
 3. A API devolve a leitura, o `nivel` de confiança e até 5 `candidatos` de morador.
-4. O porteiro confirma o morador e a encomenda é registrada (`POST /api/encomendas/registrar`). A API devolve o **código de retirada**.
+4. O porteiro confirma o morador e a encomenda é registrada (`POST /api/encomendas/registrar`). O código de retirada será enviado ao morador por notificação; esse envio ainda não está implementado.
 5. A encomenda aparece em `GET /api/encomendas/pendentes`.
 6. Na retirada, informa-se o código (`POST /api/encomendas/{id}/retirar`) e a encomenda sai da lista.
 
@@ -86,7 +86,9 @@ Não há login nem usuários. Cada instalação (um celular em um condomínio) e
 
 ## Rotas
 
-Todas exigem o header `X-Condominio-Id`.
+A página inicial (`GET /`) apresenta o fluxo de funcionamento e a documentação das rotas, sem exigir o header do condomínio. Ela está disponível também na API publicada.
+
+As rotas de encomendas abaixo exigem o header `X-Condominio-Id`.
 
 | Rota | O que faz |
 |---|---|
@@ -157,10 +159,11 @@ Corpo:
 Resposta 200:
 
 ```json
-{ "idEncomenda": 3, "status": "NOTIFICADA", "codigoRetirada": "889841" }
+{ "idEncomenda": 3, "status": "NOTIFICADA" }
 ```
 
-- `status` é `NOTIFICADA` quando o morador aceita notificação; senão, `RECEBIDA`. **O envio real da notificação (push) ainda não existe**: hoje só o status é gravado.
+- A resposta contém apenas `idEncomenda` e `status`; o código de retirada não é devolvido nela, pois será enviado ao morador por notificação. Esse envio ainda não está implementado.
+- `status` é `NOTIFICADA` quando o morador aceita notificação; senão, `RECEBIDA`. Hoje o status é gravado, mas nenhuma notificação é enviada.
 - **Aprendizado de apelido:** se `moradorSugeridoId` for diferente de `moradorId` (ou nulo), o nome lido na etiqueta é gravado em `MoradorApelido`, e nas próximas leituras o match acerta melhor.
 - A encomenda e o apelido são gravados na mesma transação.
 

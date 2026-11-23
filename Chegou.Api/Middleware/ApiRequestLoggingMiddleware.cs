@@ -11,10 +11,7 @@ namespace Chegou.Api.Middleware
         private readonly string _connectionString;
         private readonly ILogger<ApiRequestLoggingMiddleware> _logger;
 
-        public ApiRequestLoggingMiddleware(
-            RequestDelegate next,
-            IConfiguration configuration,
-            ILogger<ApiRequestLoggingMiddleware> logger)
+        public ApiRequestLoggingMiddleware(RequestDelegate next, IConfiguration configuration, ILogger<ApiRequestLoggingMiddleware> logger)
         {
             _next = next;
             _connectionString = configuration.GetConnectionString("Default")
@@ -81,8 +78,7 @@ namespace Chegou.Api.Middleware
                 header => protegidos.Contains(header.Key) ? new[] { "[REDACTED]" } : header.Value.ToArray()));
         }
 
-        private async Task RegistrarAsync(HttpContext context, long duracaoMs, string headersRequest,
-            string headersResponse, string? request, string response)
+        private async Task RegistrarAsync(HttpContext context, long duracaoMs, string headersRequest, string headersResponse, string? request, string response)
         {
             await using var connection = new SqlConnection(_connectionString);
             await connection.OpenAsync(CancellationToken.None);
@@ -108,7 +104,6 @@ namespace Chegou.Api.Middleware
             await command.ExecuteNonQueryAsync(CancellationToken.None);
         }
 
-        private static string Limitar(string valor, int tamanho) =>
-            valor.Length <= tamanho ? valor : valor[..tamanho];
+        private static string Limitar(string valor, int tamanho) => valor.Length <= tamanho ? valor : valor[..tamanho];
     }
 }

@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chegou | Documentação da API</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, sans-serif; color: #17243a; background: #f3f6fa; line-height: 1.6; }
+    body { margin: 0; }
+    header { background: #153452; color: #fff; padding: 2.5rem 1rem; }
+    header p { color: #d7e5f1; max-width: 46rem; }
+    main, .container { max-width: 64rem; margin: auto; }
+    main { padding: 1rem; }
+    section { background: #fff; padding: 1.5rem; border-radius: .6rem; margin: 1rem 0; }
+    h1, h2, h3 { line-height: 1.25; }
+    h1 { margin-top: 0; }
+    h2 { color: #153452; }
+    h3 { margin-top: 1.8rem; }
+    a { color: #075a9c; }
+    code { font-family: ui-monospace, Consolas, monospace; overflow-wrap: anywhere; }
+    pre { background: #10243a; color: #f2f7fc; padding: 1rem; border-radius: .4rem; overflow-x: auto; line-height: 1.45; }
+    pre code { overflow-wrap: normal; }
+    .method { display: inline-block; font-size: .75rem; padding: .2rem .5rem; border-radius: .3rem; background: #d9eefa; color: #075a75; vertical-align: middle; }
+    .notice { border-left: .3rem solid #c57d00; background: #fff6df; padding: .75rem 1rem; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { padding: .5rem; text-align: left; vertical-align: top; border-bottom: 1px solid #dce4ec; }
+    .table-wrap { overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>Chegou | API de encomendas</h1>
+      <p>Uma forma de apoiar a portaria no recebimento e na retirada de encomendas em condomínios.</p>
+    </div>
+  </header>
+  <main>
+    <section aria-labelledby="como-funciona">
+      <h2 id="como-funciona">Como funciona</h2>
+      <p>Quando uma encomenda chega, o porteiro fotografa a etiqueta. A API usa inteligência artificial para ler os dados e sugerir o morador. A portaria confere a sugestão, registra o recebimento e acompanha as encomendas que ainda aguardam retirada.</p>
+      <ol>
+        <li><strong>Fotografar:</strong> a etiqueta é enviada para leitura e o sistema apresenta os possíveis moradores.</li>
+        <li><strong>Confirmar:</strong> o porteiro escolhe o morador e registra a encomenda. Correções de nome podem ajudar em sugestões futuras.</li>
+        <li><strong>Acompanhar:</strong> a portaria consulta as encomendas pendentes.</li>
+        <li><strong>Retirar:</strong> a entrega é concluída com o código de retirada e o nome de quem a recebeu.</li>
+      </ol>
+      <p class="notice"><strong>Estado atual:</strong> esta API é uma prova de conceito. O envio da notificação e do código de retirada ao morador ainda não está implementado, mesmo quando o status é <code>NOTIFICADA</code>. O código não é retornado no registro.</p>
+    </section>
+
+    <section aria-labelledby="integracao">
+      <h2 id="integracao">Integração com a API</h2>
+      <p>Use a URL desta página como endereço base. As rotas de encomendas exigem o cabeçalho <code>X-Condominio-Id</code> com o <strong>código</strong> do condomínio, não o ID numérico. Esse código é uma chave de acesso: proteja-o como uma senha. A página inicial <code>GET /</code> não exige esse cabeçalho.</p>
+      <p>Nas requisições com corpo, envie JSON com <code>Content-Type: application/json</code>. Os exemplos abaixo são ilustrativos; IDs e códigos devem corresponder aos dados do seu condomínio.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Método e rota</th><th>Finalidade</th></tr></thead>
+          <tbody>
+            <tr><td><code>POST /api/encomendas/etiqueta</code></td><td>Leitura da foto e sugestão de moradores.</td></tr>
+            <tr><td><code>POST /api/encomendas/registrar</code></td><td>Registro da encomenda para o morador confirmado.</td></tr>
+            <tr><td><code>GET /api/encomendas/pendentes</code></td><td>Consulta das encomendas aguardando retirada.</td></tr>
+            <tr><td><code>POST /api/encomendas/{id}/retirar</code></td><td>Confirmação da retirada pelo código.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section aria-labelledby="rotas">
+      <h2 id="rotas">Rotas e exemplos</h2>
+      <h3><span class="method">POST</span> <code>/api/encomendas/etiqueta</code></h3>
+      <p>Envia uma foto JPEG da etiqueta em base64, sem o prefixo <code>data:image</code>. A leitura não registra a encomenda.</p>
+      <p>Corpo da requisição:</p>
+      <pre><code>{ "imgBase64": "&lt;foto em base64&gt;" }</code></pre>
+      <p>Exemplo de resposta <code>200</code>:</p>
+      <pre><code>{
+  "fotoPath": "1/exemplo.jpg",
+  "etiqueta": {
+    "transportadora": "CORREIOS",
+    "destinatario": "Maria da Silva",
+    "bloco": "A",
+    "apartamento": "101",
+    "endereco_linha": null,
+    "remetente": null,
+    "rastreio": "AA123456789BR",
+    "confianca": 0.95,
+    "problemas": []
+  },
+  "unidadeId": 1,
+  "nivel": "Alto",
+  "candidatos": [{ "moradorId": 1, "nome": "Maria da Silva", "unidadeId": 1, "score": 1.0 }]
+}</code></pre>
+      <p>O <code>nivel</code> pode ser <code>Alto</code>, <code>Medio</code> ou <code>Baixo</code>; a resposta apresenta até cinco candidatos. Quando a unidade não é identificada, a busca considera os moradores do condomínio.</p>
+
+      <h3><span class="method">POST</span> <code>/api/encomendas/registrar</code></h3>
+      <p>Confirma o morador. Envie o <code>fotoPath</code> e o objeto <code>etiqueta</code> devolvidos pela leitura, o <code>moradorId</code> escolhido e, quando disponíveis, o <code>moradorSugeridoId</code> e o <code>scoreMatch</code>.</p>
+      <p>Exemplo de corpo:</p>
+      <pre><code>{
+  "fotoPath": "1/exemplo.jpg",
+  "etiqueta": {
+    "transportadora": "CORREIOS",
+    "destinatario": "Maria da Silva",
+    "bloco": "A",
+    "apartamento": "101",
+    "endereco_linha": null,
+    "remetente": null,
+    "rastreio": "AA123456789BR",
+    "confianca": 0.95,
+    "problemas": []
+  },
+  "moradorId": 1,
+  "moradorSugeridoId": 1,
+  "scoreMatch": 1.0
+}</code></pre>
+      <p>Exemplo de resposta <code>200</code>:</p>
+      <pre><code>{ "idEncomenda": 3, "status": "NOTIFICADA" }</code></pre>
+      <p>O status é <code>NOTIFICADA</code> quando o morador aceita notificações e <code>RECEBIDA</code> caso contrário. A notificação ainda não é enviada.</p>
+
+      <h3><span class="method">GET</span> <code>/api/encomendas/pendentes</code></h3>
+      <p>Lista as encomendas do condomínio com status <code>RECEBIDA</code> ou <code>NOTIFICADA</code>. Não há corpo na requisição.</p>
+      <p>Exemplo de resposta <code>200</code>:</p>
+      <pre><code>[
+  {
+    "id": 3,
+    "status": "RECEBIDA",
+    "transportadora": "CORREIOS",
+    "rastreio": "AA123456789BR",
+    "recebidaEm": "2026-11-23T10:00:00",
+    "morador": "Maria da Silva",
+    "bloco": "A",
+    "numero": "101"
+  }
+]</code></pre>
+      <p>Quando não há encomendas pendentes, a resposta é <code>[]</code>. A data usa o horário local do servidor SQL.</p>
+
+      <h3><span class="method">POST</span> <code>/api/encomendas/{id}/retirar</code></h3>
+      <p>Substitua <code>{id}</code> pelo ID da encomenda e informe o código de retirada de seis dígitos e o nome de quem a retirou.</p>
+      <p>Exemplo de corpo para <code>/api/encomendas/3/retirar</code>:</p>
+      <pre><code>{ "codigo": "889841", "retiradaPorNome": "Maria da Silva" }</code></pre>
+      <p>Resposta <code>200</code>:</p>
+      <pre><code>{ "idEncomenda": 3, "status": "RETIRADA" }</code></pre>
+    </section>
+
+    <section aria-labelledby="erros">
+      <h2 id="erros">Erros e limitações</h2>
+      <p>Erros de negócio são retornados como <code>400</code> com mensagem em texto simples, por exemplo: <code>Header não encontrado</code>, <code>Condominio não encontrado</code>, <code>Imagem não informada</code>, <code>Morador não encontrado</code>, <code>Encomenda não encontrada</code>, <code>Codigo de retirada inválido</code> ou <code>Encomenda já retirada ou devolvida</code>. Uma falha de leitura tratada informa <code>Não foi possível ler a etiqueta. Preencha manualmente.</code></p>
+      <p>JSON inválido ou campos obrigatórios ausentes também podem gerar <code>400</code> com detalhes de validação. Falhas não tratadas, como base64 inválido ou problemas de infraestrutura, podem gerar <code>500</code>.</p>
+      <p>Para configuração, exemplos de teste e demais limitações da prova de conceito, consulte o README do projeto.</p>
+    </section>
+  </main>
+</body>
+</html>

@@ -24,13 +24,10 @@ namespace Chegou.Api.Controllers.Encomendas
         {
             public long idEncomenda { get; set; }
             public string status { get; set; }
-            public string codigoRetirada { get; set; }
-
             public Response()
             {
                 idEncomenda = 0;
                 status = string.Empty;
-                codigoRetirada = string.Empty;
             }
         }
 
@@ -66,7 +63,7 @@ namespace Chegou.Api.Controllers.Encomendas
                     novoApelido = apelido;
             }
 
-            var codigo = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
+            var codigoRetirada = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
             long idEncomenda = 0;
 
 
@@ -98,7 +95,7 @@ namespace Chegou.Api.Controllers.Encomendas
             sql.Append((manual ? 1 : 0) + ", ");
             sql.Append("'RECEBIDA'" + ", ");
             sql.Append("GETDATE()" + ", ");
-            sql.Append("'" + codigo + "'");
+            sql.Append("'" + codigoRetirada + "'");
             sql.Append(" ) ");
 
             await banco.ExecutartransactionAsync(sql.ToString(), ct);
@@ -137,7 +134,6 @@ namespace Chegou.Api.Controllers.Encomendas
 
             resposta.idEncomenda = idEncomenda;
             resposta.status = status;
-            resposta.codigoRetirada = codigo;
 
             return ("", resposta);
         }
