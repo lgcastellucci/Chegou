@@ -13,6 +13,7 @@ Esta é a versão **simples e didática** da API (POC): sem injeção de depend�
 5. A encomenda aparece em `GET /api/encomendas/pendentes`.
 6. Na retirada, informa-se o código (`POST /api/encomendas/{id}/retirar`) e a encomenda sai da lista.
 
+[Documentação da API](https://htmlpreview.github.io/?https://github.com/lgcastellucci/Chegou/blob/main/Chegou.Api/Documentacao/index.html)
 ## Estrutura
 
 ```
