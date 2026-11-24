@@ -5,21 +5,19 @@ namespace Chegou.Api.Services
 {
     public class Claude
     {
-        private static string _apiKey;
-        private static string _model;
-
-        public Claude()
-        {
-            var configuration = new ConfigurationBuilder().SetBasePath(AppContext.BaseDirectory).AddJsonFile("appsettings.json", optional: false, reloadOnChange: true).Build();
-            _apiKey = configuration.GetSection("Claude")?.GetValue<string>("ApiKey") ?? "";
-            _model = configuration.GetSection("Claude")?.GetValue<string>("Model") ?? "";
-        }
+        private const string ModeloPadrao = "claude-haiku-5-5";
 
         public async Task<EtiquetaExtraida> ExtrairEtiquetaAsync(string imgBase64, string mediaType, CancellationToken ct)
         {
+            // Configurações vêm da tabela Configuracao (ou da variável de ambiente CHEGOU_CLAUDE_APIKEY / CHEGOU_CLAUDE_MODEL)
+            var apiKey = await Configuracao.ObterAsync("Claude:ApiKey", "", ct);
+            if (string.IsNullOrWhiteSpace(apiKey))
+                throw new InvalidOperationException("Claude:ApiKey não configurada na tabela Configuracao.");
+            var modelo = await Configuracao.ObterAsync("Claude:Model", ModeloPadrao, ct);
+
             var body = new
             {
-                model = _model,
+                model = modelo,
                 max_tokens = 600,
                 system = PromptExtracao.Sistema,
                 messages = new[]
@@ -41,7 +39,7 @@ namespace Chegou.Api.Services
             http.Timeout = TimeSpan.FromSeconds(60);
 
             using var req = new HttpRequestMessage(HttpMethod.Post, "v1/messages") { Content = JsonContent.Create(body) };
-            req.Headers.Add("x-api-key", _apiKey);
+            req.Headers.Add("x-api-key", apiKey);
             req.Headers.Add("anthropic-version", "2023-06-01");
 
             using var resp = await http.SendAsync(req, ct);

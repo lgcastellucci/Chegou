@@ -5,8 +5,7 @@ namespace Chegou.Api.Services
     {
         public static async Task<string> SalvarAsync(string condominioId, string foto, CancellationToken ct)
         {
-            var configuration = new ConfigurationBuilder().SetBasePath(AppContext.BaseDirectory).AddJsonFile("appsettings.json", optional: false, reloadOnChange: true).Build();
-            string raiz = configuration.GetSection("Storage")?.GetValue<string>("Path") ?? "storage";
+            string raiz = await Configuracao.ObterAsync("Storage:Path", "storage", ct);
 
             var rel = Path.Combine(condominioId.ToString(), $"{Guid.NewGuid():N}.jpg");
             var full = Path.Combine(raiz, rel);

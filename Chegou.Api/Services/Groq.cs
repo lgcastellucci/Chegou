@@ -6,22 +6,18 @@ namespace Chegou.Api.Services
     public class Groq
     {
         private const string ModeloPadrao = "qwen/qwen3.8-27b";
-        private static string _apiKey;
-        private static string _model;
-
-        public Groq()
-        {
-            var configuration = new ConfigurationBuilder().SetBasePath(AppContext.BaseDirectory).AddJsonFile("appsettings.json", optional: false, reloadOnChange: true).Build();
-            var groq = configuration.GetSection("Groq");
-            _apiKey = groq.GetValue<string>("ApiKey") ?? "";
-            _model = groq.GetValue<string>("Model") ?? ModeloPadrao;
-        }
 
         public async Task<EtiquetaExtraida> ExtrairEtiquetaAsync(string imgBase64, string mediaType, CancellationToken ct)
         {
+            // Configurações vêm da tabela Configuracao (ou da variável de ambiente CHEGOU_GROQ_APIKEY / CHEGOU_GROQ_MODEL)
+            var apiKey = await Configuracao.ObterAsync("Groq:ApiKey", "", ct);
+            if (string.IsNullOrWhiteSpace(apiKey))
+                throw new InvalidOperationException("Groq:ApiKey não configurada na tabela Configuracao.");
+            var modelo = await Configuracao.ObterAsync("Groq:Model", ModeloPadrao, ct);
+
             var body = new
             {
-                model = _model,
+                model = modelo,
                 max_completion_tokens = 600,
                 response_format = new { type = "json_object" },
                 messages = new object[]
@@ -44,7 +40,7 @@ namespace Chegou.Api.Services
             http.Timeout = TimeSpan.FromSeconds(60);
 
             using var req = new HttpRequestMessage(HttpMethod.Post, "chat/completions") { Content = JsonContent.Create(body) };
-            req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _apiKey);
+            req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
 
             using var resp = await http.SendAsync(req, ct);
             if (!resp.IsSuccessStatusCode)

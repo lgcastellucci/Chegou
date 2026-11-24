@@ -7,6 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Include="Controllers\HomeController.cs" />
+    <EmbeddedResource Include="Documentacao\index.html" LogicalName="Chegou.Api.Documentacao.index.html" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.2" />
   </ItemGroup>
 

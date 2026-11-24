@@ -9,7 +9,7 @@ Esta é a versão **simples e didática** da API (POC): sem injeção de depend�
 1. O app envia a foto da etiqueta em base64 (`POST /api/encomendas/etiqueta`).
 2. A API salva a foto, pede à IA (Groq ou Claude) para ler a etiqueta e procura a unidade e os moradores no banco.
 3. A API devolve a leitura, o `nivel` de confiança e até 5 `candidatos` de morador.
-4. O porteiro confirma o morador e a encomenda é registrada (`POST /api/encomendas/registrar`). O código de retirada será enviado ao morador por notificação; esse envio ainda não está implementado.
+4. O porteiro confirma o morador e a encomenda é registrada (`POST /api/encomendas/registrar`). A API devolve o **código de retirada**.
 5. A encomenda aparece em `GET /api/encomendas/pendentes`.
 6. Na retirada, informa-se o código (`POST /api/encomendas/{id}/retirar`) e a encomenda sai da lista.
 
@@ -36,6 +36,7 @@ Chegou.Api/
     JaroWinkler.cs                 similaridade entre textos
     TextoNormalizador.cs           normalização de nomes, códigos e números
     SqlExtensions.cs               acesso ao SQL Server (consultas e transação)
+    Configuracao.cs                configurações lidas da tabela Configuracao (cache de 5 min)
     Storage.cs                     grava a foto em disco
   Models/
     Encomenda.cs, Morador.cs, EtiquetaExtraida.cs, PromptExtracao.cs
@@ -86,9 +87,7 @@ Não há login nem usuários. Cada instalação (um celular em um condomínio) e
 
 ## Rotas
 
-A página inicial (`GET /`) apresenta o fluxo de funcionamento e a documentação das rotas, sem exigir o header do condomínio. Ela está disponível também na API publicada.
-
-As rotas de encomendas abaixo exigem o header `X-Condominio-Id`.
+Todas exigem o header `X-Condominio-Id`.
 
 | Rota | O que faz |
 |---|---|
@@ -159,11 +158,10 @@ Corpo:
 Resposta 200:
 
 ```json
-{ "idEncomenda": 3, "status": "NOTIFICADA" }
+{ "idEncomenda": 3, "status": "NOTIFICADA", "codigoRetirada": "889841" }
 ```
 
-- A resposta contém apenas `idEncomenda` e `status`; o código de retirada não é devolvido nela, pois será enviado ao morador por notificação. Esse envio ainda não está implementado.
-- `status` é `NOTIFICADA` quando o morador aceita notificação; senão, `RECEBIDA`. Hoje o status é gravado, mas nenhuma notificação é enviada.
+- `status` é `NOTIFICADA` quando o morador aceita notificação; senão, `RECEBIDA`. **O envio real da notificação (push) ainda não existe**: hoje só o status é gravado.
 - **Aprendizado de apelido:** se `moradorSugeridoId` for diferente de `moradorId` (ou nulo), o nome lido na etiqueta é gravado em `MoradorApelido`, e nas próximas leituras o match acerta melhor.
 - A encomenda e o apelido são gravados na mesma transação.
 
@@ -177,7 +175,7 @@ Corpo: `{ "codigo": "889841", "retiradaPorNome": "Maria da Silva" }`. Resposta 2
 
 ## Banco de dados
 
-- Ordem dos scripts, todos como administrador: `schema-encomendas.sql`, depois `procedures-condominio.sql`, e o `seed-dev.sql` (opcional, só desenvolvimento).
+- Ordem dos scripts, todos como administrador: `schema-encomendas.sql`, `procedures-condominio.sql`, `configuracao.sql` e, por fim, o `seed-dev.sql` (opcional, só desenvolvimento).
 - Os arquivos do banco ficam em `/databases` (`Chegou.mdf` e `Chegou_log.ldf`). A pasta precisa existir e ser gravável pelo SQL Server.
 - A API usa o login `chegou_app`, com apenas `db_datareader` e `db_datawriter` no banco `Chegou`: sem DDL e sem acesso aos outros bancos do servidor.
 - A senha do `chegou_app` está versionada de propósito (o servidor SQL não é público). Se trocar, altere nos dois lugares: `db/schema-encomendas.sql` e `appsettings.json`.
@@ -194,18 +192,34 @@ Corpo: `{ "codigo": "889841", "retiradaPorNome": "Maria da Silva" }`. Resposta 2
 - **Atenção:** os corpos podem conter fotos em base64, dados pessoais e códigos de retirada. O log pode crescer rapidamente e manter cópias das fotos depois que os arquivos originais forem apagados. Restrinja o acesso à tabela e defina uma política de retenção e exclusão adequada à LGPD. Os corpos são lidos como texto UTF-8; esse log não é adequado para dados binários.
 
 
-## Configuração (`Chegou.Api/appsettings.json`)
+## Configuração
 
-| Chave | Para quê |
-|---|---|
-| `ConnectionStrings:Default` | conexão com o SQL Server |
-| `Groq:ApiKey`, `Groq:Model` | leitura da etiqueta pela Groq (usada nos testes iniciais). Sem `Model`, o código usa `qwen/qwen3.8-27b`: confirme o ID no console da Groq |
-| `Claude:ApiKey`, `Claude:Model` | leitura da etiqueta pelo Claude (alternativa) |
-| `Storage:Path` | pasta das fotos (padrão: `storage`, ignorada pelo git) |
+Só a connection string fica no `Chegou.Api/appsettings.json` (é ela que dá acesso ao banco). **As demais configurações ficam na tabela `Configuracao`** (`Chave`/`Valor`), criada pelo `db/configuracao.sql`:
 
-- A IA usada é escolhida em `LeituraDaEtiqueta.cs`: o trecho do `Groq` está ativo e o do `Claude` está comentado. Troque comentando um e descomentando o outro.
-- **Não versione chaves de API.** O `appsettings.json` é versionado e hoje é o único arquivo lido pelo código: faça commit sempre com as chaves **vazias**. Se uma chave já foi para o git ou para qualquer lugar público, revogue e gere outra.
-- A Groq limita imagens em base64 a 4 MB: reduza a foto no app antes de enviar.
+| Chave | Para quê | Valor inicial |
+|---|---|---|
+| `Groq:ApiKey` | chave da API da Groq (testes iniciais) | vazio |
+| `Groq:Model` | modelo da Groq. Confirme o ID no console da Groq | `qwen/qwen3.8-27b` |
+| `Claude:ApiKey` | chave da API do Claude (alternativa) | vazio |
+| `Claude:Model` | modelo do Claude | `claude-haiku-5-5` |
+| `Storage:Path` | pasta das fotos (ignorada pelo git) | `storage` |
+
+- **Alterar** (como administrador):
+  ```sql
+  EXEC dbo.ConfiguracaoDefinir @Chave = N'Groq:ApiKey', @Valor = N'<chave>';
+  ```
+  O retorno não mostra o valor das chaves de API. A chave nunca precisa passar por arquivo do repositório.
+- **Ver** sem expor as chaves:
+  ```sql
+  SELECT Chave, CASE WHEN Chave LIKE N'%ApiKey%' AND ISNULL(Valor, N'') <> N'' THEN N'********' ELSE Valor END AS Valor, Descricao, AtualizadoEm
+  FROM dbo.Configuracao ORDER BY Chave;
+  ```
+- A API lê a tabela com **cache de 5 minutos**: a mudança vale em até 5 minutos ou ao reiniciar a API.
+- **Variável de ambiente (opcional):** `CHEGOU_{CHAVE}`, com `:` virando `_` (por exemplo `CHEGOU_GROQ_APIKEY`), tem prioridade sobre a tabela. Serve para manter as chaves fora do banco.
+- O login `chegou_app` só **lê** a tabela: o script aplica `DENY INSERT, UPDATE, DELETE` nela.
+- **Atenção às chaves no banco:** a API consegue ler a tabela, então qualquer SQL injection executado por ela também consegue (veja Limitações). Enquanto os textos livres seguirem concatenados, prefira as variáveis de ambiente para as chaves de API, ou parametrize o SQL antes de guardá-las na tabela.
+- A IA usada continua sendo escolhida em `LeituraDaEtiqueta.cs`: o trecho do `Groq` está ativo e o do `Claude` está comentado.
+- A Groq limita imagens em base64 a 4 MB: reduza a foto antes de enviar.
 
 ## Rodar
 
@@ -250,6 +264,7 @@ O header é enviado sozinho a partir da variável `codigoCondominio` (padrão: o
 - **Notificação** ao morador ainda não é enviada.
 - **Configuração** lida direto do `appsettings.json` em cada classe (sem user-secrets nem variáveis de ambiente).
 - O código de retirada (6 dígitos) não tem limite de tentativas.
+- **Chaves de API na tabela `Configuracao`:** legíveis por qualquer SQL executado com o login da API, inclusive por uma injeção nos textos livres acima. Use as variáveis de ambiente `CHEGOU_*` para as chaves ou parametrize o SQL.
 
 ## Pendências
 
@@ -262,3 +277,4 @@ O header é enviado sozinho a partir da variável `codigoCondominio` (padrão: o
 - [ ] Acesso ao celular: a API precisa escutar na rede (não só em `localhost`) e o Android precisa permitir HTTP em texto claro nos testes locais
 - [ ] Job de retenção: apagar fotos depois de `Condominio.RetencaoFotoDias` (LGPD)
 - [ ] Testes do `MatchService` e documentação da API (Swagger), se voltarem ao projeto
+- [ ] Parametrizar o SQL (`SqlParameter`), principalmente nos textos livres, para guardar as chaves de API na tabela com segurança
