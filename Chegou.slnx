@@ -7,7 +7,7 @@
     <File Path="db/procedures-condominio.sql" />
     <File Path="db/schema-encomendas.sql" />
     <File Path="db/seed-dev.sql" />
-    <File Path="db/seed-Maui.sql" />
+    <File Path="db/configuracao.sql" />
   </Folder>
   <Folder Name="/docs/">
     <File Path="docs/Chegou.postman_collection.json" />

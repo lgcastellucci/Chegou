@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="Controllers\HomeController.cs" />
     <EmbeddedResource Include="Documentacao\index.html" LogicalName="Chegou.Api.Documentacao.index.html" />
   </ItemGroup>
 
