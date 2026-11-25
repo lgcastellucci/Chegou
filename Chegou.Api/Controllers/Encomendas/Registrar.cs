@@ -73,64 +73,86 @@ namespace Chegou.Api.Controllers.Encomendas
             if (!lTransacao)
                 return ("Não foi possível iniciar a transação", resposta);
 
-            sql.Clear();
-            sql.Append(" INSERT INTO Encomenda ");
-            sql.Append(" (CondominioId, UnidadeId, MoradorId, FotoPath, DadosExtraidosJson, ");
-            sql.Append("  DestinatarioLido, BlocoLido, NumeroLido, Transportadora, Rastreio,");
-            sql.Append("  Confianca, ScoreMatch, MatchManual, Status, RecebidaEm, CodigoRetirada)");
-            sql.Append(" VALUES ");
-            sql.Append(" ( ");
-            sql.Append(condominioId + ", ");
-            sql.Append(morador.UnidadeId + ", ");
-            sql.Append(morador.Id + ", ");
-            sql.Append("'" + request.fotoPath + "', ");
-            sql.Append("'" + JsonSerializer.Serialize(request.etiqueta) + "', ");
-            sql.Append("'" + request.etiqueta.Destinatario + "', ");
-            sql.Append("'" + request.etiqueta.Bloco + "', ");
-            sql.Append("'" + request.etiqueta.Apartamento + "', ");
-            sql.Append("'" + request.etiqueta.Transportadora + "', ");
-            sql.Append("'" + request.etiqueta.Rastreio + "', ");
-            sql.Append(request.etiqueta.Confianca.ToString("F2").Replace(",", ".") + ", "); // 3 casas, 2 decimais
-            sql.Append((request.scoreMatch is null ? "NULL" : request.scoreMatch.Value.ToString("F2").Replace(",", ".")) + ", "); // 3 casas, 2 decimais
-            sql.Append((manual ? 1 : 0) + ", ");
-            sql.Append("'RECEBIDA'" + ", ");
-            sql.Append("GETDATE()" + ", ");
-            sql.Append("'" + codigoRetirada + "'");
-            sql.Append(" ) ");
+            var status = morador.AceitaNotificacao ? "NOTIFICADA" : "RECEBIDA";
 
-            await banco.ExecutartransactionAsync(sql.ToString(), ct);
-
-            // Recupera o ID da encomenda recém inserida
-            sql.Clear();
-            sql.Append(" SELECT SCOPE_IDENTITY() ");
-            var dtIdentity = await banco.SelecionartransactionAsync(sql.ToString(), ct);
-            if (dtIdentity.Rows.Count > 0)
-            {
-                idEncomenda = Convert.ToInt64(dtIdentity.Rows[0][0]);
-            }
-
-            if (novoApelido is not null)
+            try
             {
                 sql.Clear();
-                sql.Append(" IF NOT EXISTS(SELECT 1 FROM MoradorApelido WHERE MoradorId = " + morador.Id + " AND ApelidoNorm = '" + novoApelido + "') ");
-                sql.Append("   INSERT INTO MoradorApelido(MoradorId, ApelidoNorm, Origem) VALUES(" + morador.Id + ", '" + novoApelido + "', 'CORRECAO') ");
+                sql.Append(" INSERT INTO Encomenda ");
+                sql.Append(" (CondominioId, UnidadeId, MoradorId, FotoPath, DadosExtraidosJson, ");
+                sql.Append("  DestinatarioLido, BlocoLido, NumeroLido, Transportadora, Rastreio,");
+                sql.Append("  Confianca, ScoreMatch, MatchManual, Status, RecebidaEm, CodigoRetirada)");
+                sql.Append(" VALUES ");
+                sql.Append(" ( ");
+                sql.Append(condominioId + ", ");
+                sql.Append(morador.UnidadeId + ", ");
+                sql.Append(morador.Id + ", ");
+                sql.Append("'" + request.fotoPath + "', ");
+                sql.Append("'" + JsonSerializer.Serialize(request.etiqueta) + "', ");
+                sql.Append("'" + request.etiqueta.Destinatario + "', ");
+                sql.Append("'" + request.etiqueta.Bloco + "', ");
+                sql.Append("'" + request.etiqueta.Apartamento + "', ");
+                sql.Append("'" + request.etiqueta.Transportadora + "', ");
+                sql.Append("'" + request.etiqueta.Rastreio + "', ");
+                sql.Append(request.etiqueta.Confianca.ToString("F2").Replace(",", ".") + ", "); // 3 casas, 2 decimais
+                sql.Append((request.scoreMatch is null ? "NULL" : request.scoreMatch.Value.ToString("F2").Replace(",", ".")) + ", "); // 3 casas, 2 decimais
+                sql.Append((manual ? 1 : 0) + ", ");
+                sql.Append("'RECEBIDA'" + ", ");
+                sql.Append("GETDATE()" + ", ");
+                sql.Append("'" + codigoRetirada + "'");
+                sql.Append(" ) ");
 
                 await banco.ExecutartransactionAsync(sql.ToString(), ct);
-            }
-            banco.CommitAsync(ct);
 
-
-            var status = "RECEBIDA";
-            if (morador.AceitaNotificacao)
-            {
-                //Envia o push notification para o morador
-                //await notificador.NotificarAsync(morador, id, codigo, ct);
-
+                // Recupera o ID da encomenda recém inserida
                 sql.Clear();
-                sql.Append(" UPDATE Encomenda SET Status = 'NOTIFICADA', NotificadaEm = GETDATE() WHERE Id = " + idEncomenda);
-                await banco.ExecutarAsync(sql.ToString(), ct);
-                status = "NOTIFICADA";
+                sql.Append(" SELECT SCOPE_IDENTITY() ");
+                var dtIdentity = await banco.SelecionartransactionAsync(sql.ToString(), ct);
+                if (dtIdentity.Rows.Count == 0 || dtIdentity.Rows[0][0] == DBNull.Value)
+                {
+                    if (!await banco.RollbackAsync(CancellationToken.None))
+                        return ("Não foi possível desfazer a transação do registro.", resposta);
+
+                    return ("Não foi possível obter o identificador da encomenda registrada.", resposta);
+                }
+
+                idEncomenda = Convert.ToInt64(dtIdentity.Rows[0][0]);
+
+                if (novoApelido is not null)
+                {
+                    sql.Clear();
+                    sql.Append(" IF NOT EXISTS(SELECT 1 FROM MoradorApelido WHERE MoradorId = " + morador.Id + " AND ApelidoNorm = '" + novoApelido + "') ");
+                    sql.Append("   INSERT INTO MoradorApelido(MoradorId, ApelidoNorm, Origem) VALUES(" + morador.Id + ", '" + novoApelido + "', 'CORRECAO') ");
+
+                    await banco.ExecutartransactionAsync(sql.ToString(), ct);
+                }
+
+                if (morador.AceitaNotificacao)
+                {
+                    //Envia o push notification para o morador
+                    //await notificador.NotificarAsync(morador, id, codigo, ct);
+
+                    sql.Clear();
+                    sql.Append(" UPDATE Encomenda SET Status = 'NOTIFICADA', NotificadaEm = GETDATE() WHERE Id = " + idEncomenda);
+                    await banco.ExecutartransactionAsync(sql.ToString(), ct);
+                }
+
+                if (!await banco.CommitAsync(ct))
+                {
+                    if (!await banco.RollbackAsync(CancellationToken.None))
+                        return ("Não foi possível confirmar nem desfazer a transação do registro.", resposta);
+
+                    return ("Não foi possível confirmar a transação do registro.", resposta);
+                }
             }
+            catch (Exception ex)
+            {
+                if (!await banco.RollbackAsync(CancellationToken.None))
+                    return ($"Erro ao registrar a encomenda e não foi possível desfazer a transação: {ex.Message}", resposta);
+
+                return ($"Erro ao registrar a encomenda: {ex.Message}", resposta);
+            }
+
 
             resposta.idEncomenda = idEncomenda;
             resposta.status = status;

@@ -261,7 +261,6 @@ O header é enviado sozinho a partir da variável `codigoCondominio` (padrão: o
 ## Limitações conhecidas (POC)
 
 - **Textos livres concatenados no SQL.** Valores normalizados (código do condomínio, ids, bloco, apartamento, apelido) são seguros. Já os textos livres (destinatário, transportadora, rastreio, `fotoPath` no registro e `retiradaPorNome` na retirada) entram concatenados: um nome com apóstrofo (D'Ávila) quebra o SQL com erro 500 e, em teoria, quem tem o código do condomínio consegue injetar SQL. Decisão da POC; antes de produção, passar para parâmetros (`SqlParameter`).
-- **Transação do registro** sem `Rollback` quando um comando falha no meio, e o `Commit` não tem o resultado verificado.
 - **Notificação** ao morador ainda não é enviada.
 - **Configuração** lida direto do `appsettings.json` em cada classe (sem user-secrets nem variáveis de ambiente).
 - O código de retirada (6 dígitos) não tem limite de tentativas.
@@ -270,7 +269,6 @@ O header é enviado sozinho a partir da variável `codigoCondominio` (padrão: o
 ## Pendências
 
 - [ ] Enviar a notificação (push) ao morador no registro
-- [ ] Rollback e verificação do commit no registro
 - [ ] Carregar os apelidos do morador em `BuscarMorador` (hoje só `BuscarMoradores` os carrega)
 - [ ] Ler a configuração pelo `IConfiguration` do `Program` (user-secrets e `appsettings.Development.json`)
 - [ ] Tratar base64 inválido e timeout da IA (hoje viram erro 500) e reutilizar o `HttpClient`

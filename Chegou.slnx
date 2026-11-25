@@ -1,3 +1,23 @@
 <Solution>
   <Project Path="Chegou.Api/Chegou.Api.csproj" />
+  <Folder Name="/Itens de Solução/">
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/db/">
+    <File Path="db/procedures-condominio.sql" />
+    <File Path="db/schema-encomendas.sql" />
+    <File Path="db/seed-dev.sql" />
+    <File Path="db/seed-Maui.sql" />
+  </Folder>
+  <Folder Name="/docs/">
+    <File Path="docs/Chegou.postman_collection.json" />
+    <File Path="docs/Chegou.postman_console.json" />
+    <File Path="docs/prompt-extracao-etiqueta.md" />
+  </Folder>
+  <Folder Name="/docs/ImagensExemplo/">
+    <File Path="docs/ImagensExemplo/Imagem1.jpeg" />
+  </Folder>
+  <Folder Name="/Chegou.FrontEnd/">
+    <File Path="Chegou.FrontEnd/index.html" />
+  </Folder>
 </Solution>

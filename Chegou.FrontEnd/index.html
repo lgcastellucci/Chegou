@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Chegou · Portaria</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #EDF0F3;
+            --card: #fff;
+            --ink: #14213D;
+            --mut: #5A6578;
+            --line: #D5DAE1;
+            --tape: #F2B705;
+            --ok: #1F7A4D;
+            --okbg: #E2F3EA;
+            --err: #B3261E;
+            --errbg: #FBE8E6;
+            --warn: #8A5A00;
+            --warnbg: #FFF1CC;
+            --r: 10px
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font: 16px/1.5 "Bricolage Grotesque",system-ui,sans-serif
+        }
+
+        header {
+            background: var(--ink);
+            color: #fff;
+            padding: 14px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 5px solid var(--tape)
+        }
+
+            header h1 {
+                margin: 0;
+                font-size: 22px;
+                font-weight: 800;
+                letter-spacing: -.02em
+            }
+
+            header button {
+                background: none;
+                border: 1px solid #ffffff55;
+                color: #fff;
+                border-radius: var(--r);
+                padding: 6px 12px;
+                font: inherit;
+                font-size: 14px;
+                cursor: pointer
+            }
+
+        main {
+            max-width: 560px;
+            margin: 0 auto;
+            padding: 16px 16px 96px
+        }
+
+        h2 {
+            font-size: 20px;
+            margin: 4px 0 12px;
+            letter-spacing: -.01em
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: var(--r);
+            padding: 16px;
+            margin-bottom: 12px
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 12px 0 4px
+        }
+
+        input[type=text], input[type=number], input[type=url], input[type=search], input:not([type]) {
+            width: 100%;
+            font: inherit;
+            padding: 11px 12px;
+            border: 1px solid var(--line);
+            border-radius: var(--r);
+            background: #fff;
+            color: var(--ink)
+        }
+
+        input:focus-visible, button:focus-visible, select:focus-visible, .cand:focus-within {
+            outline: 3px solid var(--tape);
+            outline-offset: 1px
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px
+        }
+
+        button.p, button.s {
+            font: inherit;
+            font-weight: 600;
+            border-radius: var(--r);
+            padding: 13px 16px;
+            width: 100%;
+            cursor: pointer;
+            margin-top: 12px;
+            border: 2px solid var(--ink)
+        }
+
+        button.p {
+            background: var(--tape);
+            color: var(--ink)
+        }
+
+        button.s {
+            background: #fff;
+            color: var(--ink)
+        }
+
+        button:disabled {
+            opacity: .55;
+            cursor: wait
+        }
+
+        .hint {
+            color: var(--mut);
+            font-size: 14px
+        }
+
+        .msg {
+            border-radius: var(--r);
+            padding: 10px 12px;
+            margin: 12px 0;
+            font-size: 15px
+        }
+
+            .msg.err {
+                background: var(--errbg);
+                color: var(--err)
+            }
+
+            .msg.ok {
+                background: var(--okbg);
+                color: var(--ok)
+            }
+
+            .msg.warn {
+                background: var(--warnbg);
+                color: var(--warn)
+            }
+
+        .drop {
+            display: block;
+            text-align: center;
+            border: 2px dashed var(--ink);
+            border-radius: var(--r);
+            padding: 36px 16px;
+            cursor: pointer;
+            background: #fff;
+            font-weight: 600
+        }
+
+            .drop:focus-within {
+                outline: 3px solid var(--tape)
+            }
+
+            .drop small {
+                display: block;
+                font-weight: 400;
+                color: var(--mut)
+            }
+
+        .prev {
+            width: 100%;
+            max-height: 220px;
+            object-fit: contain;
+            background: #000;
+            border-radius: var(--r)
+        }
+
+        .cand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border: 1px solid var(--line);
+            border-radius: var(--r);
+            padding: 10px 12px;
+            margin-top: 8px;
+            cursor: pointer;
+            background: #fff
+        }
+
+            .cand input {
+                width: 20px;
+                height: 20px;
+                accent-color: var(--ink)
+            }
+
+            .cand b {
+                flex: 1;
+                font-weight: 600
+            }
+
+        .badge {
+            font-size: 13px;
+            border-radius: 99px;
+            padding: 2px 10px;
+            font-weight: 600;
+            background: var(--line);
+            color: var(--ink);
+            white-space: nowrap
+        }
+
+            .badge.alto {
+                background: var(--okbg);
+                color: var(--ok)
+            }
+
+            .badge.medio {
+                background: var(--warnbg);
+                color: var(--warn)
+            }
+
+            .badge.baixo {
+                background: var(--errbg);
+                color: var(--err)
+            }
+
+        .enc {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            justify-content: space-between
+        }
+
+            .enc h3 {
+                margin: 0;
+                font-size: 17px
+            }
+
+            .enc p {
+                margin: 2px 0 0;
+                color: var(--mut);
+                font-size: 14px;
+                word-break: break-all
+            }
+
+            .enc button {
+                width: auto;
+                margin: 0;
+                padding: 9px 14px
+            }
+
+        nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border-top: 1px solid var(--line);
+            display: flex
+        }
+
+            nav button {
+                flex: 1;
+                padding: 16px;
+                font: inherit;
+                font-weight: 600;
+                background: none;
+                border: 0;
+                border-top: 4px solid transparent;
+                cursor: pointer;
+                color: var(--mut)
+            }
+
+                nav button[aria-current=page] {
+                    color: var(--ink);
+                    border-top-color: var(--tape)
+                }
+
+        .big {
+            text-align: center;
+            padding: 24px 8px
+        }
+
+            .big .n {
+                font-size: 44px;
+                font-weight: 800;
+                letter-spacing: -.03em
+            }
+
+        dialog {
+            border: 0;
+            border-radius: 12px;
+            padding: 20px;
+            width: min(92vw,420px)
+        }
+
+            dialog::backdrop {
+                background: #14213D99
+            }
+
+        #toast {
+            position: fixed;
+            left: 50%;
+            bottom: 84px;
+            transform: translateX(-50%);
+            background: var(--ink);
+            color: #fff;
+            padding: 10px 18px;
+            border-radius: 99px;
+            font-size: 15px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .2s
+        }
+
+            #toast.on {
+                opacity: 1
+            }
+
+        .spin {
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            border: 2px solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            animation: g .7s linear infinite;
+            vertical-align: -.15em;
+            margin-right: 8px
+        }
+
+            .spin.lg {
+                display: block;
+                width: 30px;
+                height: 30px;
+                border-width: 3px;
+                margin: 0 auto 12px;
+                color: var(--ink)
+            }
+
+        @keyframes g {
+            to {
+                transform: rotate(360deg)
+            }
+        }
+
+        .lendo p {
+            margin: 8px 0 0;
+            font-weight: 600
+        }
+
+        .hb {
+            display: flex;
+            gap: 8px;
+            align-items: center
+        }
+
+        header #how {
+            width: 34px;
+            height: 34px;
+            padding: 0;
+            border-radius: 50%;
+            font-weight: 600
+        }
+
+        #tour {
+            width: min(92vw,440px)
+        }
+
+            #tour h2 {
+                margin: 0 0 8px;
+                font-size: 22px;
+                letter-spacing: -.01em
+            }
+
+            #tour p {
+                margin: 0;
+                color: var(--mut)
+            }
+
+        .tp {
+            background: var(--tape);
+            color: var(--ink);
+            font-weight: 800;
+            font-size: 34px;
+            letter-spacing: -.03em;
+            border-radius: 14px;
+            padding: 22px;
+            text-align: center;
+            margin-bottom: 16px
+        }
+
+            .tp small {
+                display: block;
+                font-size: 14px;
+                font-weight: 600;
+                letter-spacing: 0;
+                margin-top: 2px
+            }
+
+        .dots {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            margin: 18px 0 4px
+        }
+
+            .dots i {
+                width: 8px;
+                height: 8px;
+                border-radius: 99px;
+                background: var(--line)
+            }
+
+                .dots i.on {
+                    background: var(--ink);
+                    width: 22px
+                }
+
+        .acts {
+            display: flex;
+            gap: 10px
+        }
+
+            .acts button {
+                flex: 1
+            }
+
+        .skip {
+            display: block;
+            margin: 12px auto 0;
+            background: none;
+            border: 0;
+            color: var(--mut);
+            font: inherit;
+            font-size: 14px;
+            text-decoration: underline;
+            cursor: pointer
+        }
+
+        @media (prefers-reduced-motion:reduce) {
+            #toast {
+                transition: none
+            }
+
+            .spin {
+                animation-duration: 3s
+            }
+        }
+    </style>
+</head>
+<body>
+    <header><h1>Chegou</h1><div class="hb"><button id="how" aria-label="Como funciona" title="Como funciona">?</button><button id="cfg" hidden>Configurar</button></div></header>
+    <main id="app"></main>
+    <nav id="nav" hidden>
+        <button data-v="nova">Nova encomenda</button>
+        <button data-v="pend">Pendentes</button>
+    </nav>
+    <dialog id="dlg"></dialog>
+    <dialog id="tour" aria-labelledby="tt"></dialog>
+    <div id="toast" role="status"></div>
+
+    <script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const store = {
+          get(k, d = '') { try { return localStorage.getItem(k) || d } catch { return d } },
+          set(k, v) { try { localStorage.setItem(k, v) } catch {} },
+          del(k) { try { localStorage.removeItem(k) } catch {} }
+};
+const cfg = { get api() { return store.get('api', 'https://home.castellucci.net.br/chegou.api') }, get cod() { return store.get('cod', 'DEV-CHEGOU-CONDOMINIO-TESTE-0001') } };
+const S = { view: 'acesso', leitura: null, preview: '', pend: [], filtro: '', ok: null };
+
+async function api(path, body) {
+          let r;
+          try {
+            r = await fetch(cfg.api.replace(/\/$/, '') + path, {
+              method: body ? 'POST' : 'GET',
+              headers: { 'X-Condominio-Id': cfg.cod, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+              body: body ? JSON.stringify(body) : undefined
+            });
+          } catch {
+            throw new Error('Não foi possível conectar à API. Confira a URL, se a API está rodando e se o CORS está liberado para este endereço.');
+          }
+          const t = await r.text();
+          if (!r.ok) throw new Error(t ? t.slice(0, 300) : 'Erro ' + r.status);
+          return t ? JSON.parse(t) : null;
+}
+
+function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); setTimeout(() => t.classList.remove('on'), 2600) }
+const AMIGAVEL = {
+          'Condominio não encontrado': 'Código do condomínio não reconhecido. Confira e tente de novo.',
+          'Header não encontrado': 'Informe o código do condomínio para continuar.',
+          'Codigo de retirada inválido': 'Código incorreto. Confira com o morador e tente de novo.',
+          'Encomenda já retirada ou devolvida': 'Esta encomenda já foi retirada.',
+          'Morador não encontrado': 'Morador não encontrado. Escolha outro morador.',
+          'Imagem não informada': 'Nenhuma foto recebida. Tire a foto de novo.'
+};
+function err(m) { return m ? `<div class="msg err" role="alert">${esc(AMIGAVEL[m] || m)}</div>` : '' }
+function busy(btn, txt) { btn.disabled = true; btn.dataset.t = btn.textContent; btn.innerHTML = '<span class="spin"></span>' + esc(txt) }
+function free(btn) { btn.disabled = false; btn.textContent = btn.dataset.t }
+
+async function reduzir(file) {
+          const bmp = await createImageBitmap(file);
+          const s = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+          const c = document.createElement('canvas');
+          c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+          c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+          let q = .85, d;
+          do { d = c.toDataURL('image/jpeg', q); q -= .1 } while (d.length > 3.8e6 && q > .3);
+          return d;
+}
+
+const PASSOS = [
+          { n: 'Chegou', s: '', t: 'Chegou avisa o morador', d: 'Aviso automático de encomendas para condomínios. O porteiro fotografa a etiqueta, o sistema encontra o morador e a retirada é feita com um código. Sem caderno de recebimento e sem ligar para cada apartamento.' },
+          { n: '1', s: 'Fotografar', t: 'Fotografe a etiqueta', d: 'Amazon, Mercado Livre, Correios… Tire uma foto da etiqueta. A leitura é automática e traz destinatário, bloco, apartamento, rastreio e transportadora.' },
+          { n: '2', s: 'Confirmar', t: 'Confirme o morador', d: 'O sistema sugere quem é o morador. Com confiança alta, ele já vem marcado; nos outros casos, você escolhe na lista. Corrigir uma sugestão errada ajuda o sistema a acertar nas próximas vezes.' },
+          { n: '3', s: 'Registrar', t: 'O morador é avisado', d: 'Ao registrar, o morador recebe o aviso com o código de retirada. Você não precisa passar o código. Se a tela disser que o morador não tem notificação ativa, avise-o pessoalmente.' },
+          { n: '4', s: 'Entregar', t: 'Entregue com o código', d: 'Em Pendentes, toque em Retirar, digite o código que o morador mostrar e o nome de quem retira. A encomenda sai da lista.' }
+];
+
+function tour(i = 0) {
+          const d = $('#tour'), p = PASSOS[i], ult = i === PASSOS.length - 1;
+          d.innerHTML = `<div class="tp" aria-hidden="true">${esc(p.n)}${p.s ? `<small>${esc(p.s)}</small>` : ''}</div>
+          <h2 id="tt">${esc(p.t)}</h2><p>${esc(p.d)}</p>
+          <div class="dots" role="img" aria-label="Passo ${i + 1} de ${PASSOS.length}">${PASSOS.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>
+          <div class="acts">${i ? '<button class="s" id="tb" type="button">Voltar</button>' : ''}<button class="p" id="tn" type="button">${ult ? 'Começar' : i ? 'Próximo' : 'Ver como funciona'}</button></div>
+          ${ult ? '' : '<button class="skip" id="tk" type="button">Pular</button>'}`;
+          if (!d.open) d.showModal();
+          $('#tn').onclick = () => ult ? d.close() : tour(i + 1);
+          if (i) $('#tb').onclick = () => tour(i - 1);
+          if (!ult) $('#tk').onclick = () => d.close();
+}
+$('#tour').addEventListener('close', () => store.set('tour', '1'));
+$('#how').onclick = () => tour();
+
+function go(v) {
+          S.view = v;
+          $('#nav').hidden = v === 'acesso';
+          $('#cfg').hidden = v === 'acesso';
+          const aba = v === 'confirmar' || v === 'ok' ? 'nova' : v;
+          document.querySelectorAll('nav button').forEach(b => {
+            if (b.dataset.v === aba) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+          });
+          ({ acesso: vAcesso, nova: vNova, confirmar: vConfirmar, ok: vOk, pend: vPend })[v]();
+          window.scrollTo(0, 0);
+}
+
+function vAcesso(e = '') {
+          $('#app').innerHTML = `<h2>Acesso da portaria</h2>
+          <form class="card" id="f">
+            <label for="api">URL da API</label><input id="api" type="url" value="${esc(cfg.api)}" required>
+            <label for="cod">Código do condomínio</label><input id="cod" value="${esc(cfg.cod)}" autocomplete="off" required>
+            <p class="hint">${cfg.cod === 'DEV-CHEGOU-CONDOMINIO-TESTE' ? 'Código de teste preenchido. ' : ''}O código fica salvo só neste aparelho depois que você entrar.</p>
+            ${err(e)}<button class="p" type="submit">Entrar</button>
+          </form>
+          <button type="button" class="skip" id="hw">Primeira vez aqui? Veja como funciona</button>`;
+          $('#hw').onclick = () => tour();
+          $('#f').onsubmit = async ev => {
+            ev.preventDefault();
+            const b = ev.submitter; busy(b, 'Verificando…');
+            store.set('api', $('#api').value.trim()); store.set('cod', $('#cod').value.trim());
+            try { await api('/api/encomendas/pendentes'); go('nova') }
+            catch (x) { store.del('cod'); vAcesso(x.message) }
+          };
+}
+
+function lendo(msg, img) {
+          $('#app').innerHTML = `<div class="card big lendo" role="status">${img ? `<img class="prev" src="${img}" alt="Foto da etiqueta" style="margin-bottom:16px">` : ''}<span class="spin lg"></span><p>${esc(msg)}</p></div>`;
+}
+
+function vNova(e = '') {
+          $('#app').innerHTML = `<h2>Nova encomenda</h2>
+          <label class="drop" for="foto">Fotografar a etiqueta<small>Toque para abrir a câmera ou escolher uma foto</small></label>
+          <input id="foto" type="file" accept="image/*" capture="environment" hidden>
+          <div id="st">${err(e)}</div>`;
+          $('#foto').onchange = async ev => {
+            const f = ev.target.files[0]; if (!f) return;
+            let t1;
+            try {
+              lendo('Preparando a foto…');
+              const d = await reduzir(f);
+              S.preview = d;
+              lendo('Lendo a etiqueta…', d);
+              t1 = setTimeout(() => lendo('Procurando o morador…', d), 4000);
+              S.leitura = await api('/api/encomendas/etiqueta', { imgBase64: d.split(',')[1] });
+              clearTimeout(t1);
+              go('confirmar');
+            } catch (x) { clearTimeout(t1); vNova(x.message) }
+          };
+}
+
+function vConfirmar(e = '') {
+          const L = S.leitura, t = L.etiqueta || {}, c = L.candidatos || [];
+          const nivel = L.nivel || 'Baixo', pre = nivel === 'Alto' ? 0 : -1;
+          const aviso = { Alto: ['ok', 'Morador identificado com alta confiança. Confira e confirme.'], Medio: ['warn', 'Confiança média. Confira o morador na lista.'], Baixo: ['err', 'Baixa confiança. Escolha o morador manualmente.'] }[nivel] || ['warn', ''];
+          const f = (id, lb, v) => `<div><label for="${id}">${lb}</label><input id="${id}" value="${esc(v)}"></div>`;
+          $('#app').innerHTML = `<h2>Confirmar morador</h2>
+          <img class="prev" src="${S.preview}" alt="Foto da etiqueta">
+          <div class="msg ${aviso[0]}">${aviso[1]}${(t.problemas || []).length ? '<br>Observações da leitura: ' + esc(t.problemas.join('; ')) : ''}</div>
+          <form id="f">
+            <div class="card"><div class="row">${f('destinatario', 'Destinatário', t.destinatario)}${f('transportadora', 'Transportadora', t.transportadora)}</div>
+            <div class="row">${f('bloco', 'Bloco', t.bloco)}${f('apartamento', 'Apartamento', t.apartamento)}</div>
+            ${f('rastreio', 'Rastreio', t.rastreio)}</div>
+            <div class="card"><b>Moradores sugeridos</b>
+            ${c.length ? c.map((m, i) => `<label class="cand"><input type="radio" name="m" value="${m.moradorId}" ${i === pre ? 'checked' : ''}><b>${esc(m.nome)}</b><span class="badge ${nivel.toLowerCase()}">${Math.round(m.score * 100)}%</span></label>`).join('') : '<p class="hint">Nenhum candidato encontrado.</p>'}
+            <label for="manual">${c.length ? 'Ou informe o ID do morador' : 'Informe o ID do morador'}</label>
+            <input id="manual" type="number" min="1" inputmode="numeric">
+            <p class="hint">A API ainda não tem busca de moradores; o ID manual é um recurso provisório.</p></div>
+            <div id="er">${err(e)}</div>
+            <button class="p" type="submit">Registrar encomenda</button>
+            <button class="s" type="button" id="cn">Cancelar</button>
+          </form>`;
+          $('#cn').onclick = () => go('nova');
+          $('#f').onsubmit = async ev => {
+            ev.preventDefault();
+            const man = $('#manual').value.trim(), rad = document.querySelector('input[name=m]:checked');
+            const id = man || (rad && rad.value);
+            if (!id) { $('#er').innerHTML = err('Escolha um morador ou informe o ID.'); return }
+            const sug = c[0] || null, b = ev.submitter; busy(b, 'Registrando…');
+            const g = k => $('#' + k).value.trim();
+            try {
+              const r = await api('/api/encomendas/registrar', {
+                fotoPath: L.fotoPath,
+                etiqueta: { ...t, destinatario: g('destinatario'), transportadora: g('transportadora'), bloco: g('bloco'), apartamento: g('apartamento'), rastreio: g('rastreio') },
+                moradorId: Number(id),
+                moradorSugeridoId: sug ? sug.moradorId : null,
+                scoreMatch: sug ? sug.score : 0
+              });
+              S.ok = r; go('ok');
+            } catch (x) { free(b); $('#er').innerHTML = err(x.message) }
+          };
+}
+
+function vOk() {
+          if (navigator.vibrate) navigator.vibrate(60);
+          const r = S.ok || {}, n = r.status === 'NOTIFICADA';
+          $('#app').innerHTML = `<div class="card big"><div class="n">#${esc(r.idEncomenda)}</div>
+          <h2>Encomenda registrada</h2>
+          <div class="msg ${n ? 'ok' : 'warn'}">${n ? 'O morador será avisado e receberá o código de retirada.' : 'Morador sem notificação ativa. Avise-o pessoalmente.'}</div>
+          <button class="p" id="nx">Registrar outra encomenda</button>
+          <button class="s" id="pd">Ver pendentes</button></div>`;
+          $('#nx').onclick = () => go('nova'); $('#pd').onclick = () => go('pend');
+}
+
+async function vPend(e = '') {
+          $('#app').innerHTML = `<h2>Pendentes na portaria</h2>
+          <input type="search" id="q" placeholder="Buscar por morador, bloco ou rastreio" value="${esc(S.filtro)}" aria-label="Buscar">
+          <div id="ls" style="margin-top:12px"><p class="hint"><span class="spin"></span>Carregando pendentes…</p></div>`;
+          $('#q').oninput = ev => { S.filtro = ev.target.value; lista() };
+          try { S.pend = await api('/api/encomendas/pendentes'); lista() }
+          catch (x) { $('#ls').innerHTML = err(x.message) }
+}
+
+function lista() {
+          const q = S.filtro.toLowerCase();
+          const l = S.pend.filter(p => [p.morador, p.bloco, p.numero, p.rastreio, p.transportadora].join(' ').toLowerCase().includes(q));
+          $('#ls').innerHTML = l.length ? l.map(p => `<div class="card enc"><div>
+            <h3>${esc(p.morador)}</h3>
+            <p>${p.bloco ? 'Bloco ' + esc(p.bloco) + ' · ' : ''}Apto ${esc(p.numero)}</p>
+            <p>${esc(p.transportadora)} ${esc(p.rastreio)}</p>
+            <p>${new Date(p.recebidaEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })} · ${esc(p.status)}</p></div>
+            <button class="p" data-id="${esc(p.id)}" data-n="${esc(p.morador)}">Retirar</button></div>`).join('')
+            : '<div class="card"><p class="hint">Nenhuma encomenda pendente. Quando uma chegar, ela aparece aqui.</p></div>';
+          document.querySelectorAll('#ls [data-id]').forEach(b => b.onclick = () => retirar(b.dataset.id, b.dataset.n));
+}
+
+function retirar(id, nome, e = '') {
+          const d = $('#dlg');
+          d.innerHTML = `<form id="rf"><h2>Retirar encomenda #${esc(id)}</h2>
+          <label for="cd">Código de retirada</label><input id="cd" inputmode="numeric" maxlength="6" autocomplete="off" required>
+          <label for="rp">Quem retira</label><input id="rp" value="${esc(nome)}" required>
+          <div id="re">${err(e)}</div>
+          <button class="p" type="submit">Confirmar retirada</button>
+          <button class="s" type="button" id="rc">Cancelar</button></form>`;
+          if (!d.open) d.showModal();
+          $('#rc').onclick = () => d.close();
+          $('#rf').onsubmit = async ev => {
+            ev.preventDefault(); const b = ev.submitter; busy(b, 'Confirmando…');
+            try {
+              await api(`/api/encomendas/${encodeURIComponent(id)}/retirar`, { codigo: $('#cd').value.trim(), retiradaPorNome: $('#rp').value.trim() });
+              d.close(); toast('Retirada registrada'); vPend();
+            } catch (x) { free(b); $('#re').innerHTML = err(x.message) }
+          };
+}
+
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => go(b.dataset.v));
+$('#cfg').onclick = () => { S.view = 'acesso'; go('acesso') };
+store.get('cod') ? go('nova') : go('acesso');
+if (!store.get('tour')) tour();
+    </script>
+</body>
+</html>
