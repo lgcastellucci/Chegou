@@ -294,8 +294,6 @@ O header é enviado sozinho a partir da variável `codigoCondominio` (padrão: o
 ## Pendências
 
 - [ ] Enviar a notificação (push) ao morador no registro
-- [ ] Carregar os apelidos do morador em `BuscarMorador` (hoje só `BuscarMoradores` os carrega)
-- [ ] Ler a configuração pelo `IConfiguration` do `Program` (user-secrets e `appsettings.Development.json`)
 - [ ] Tratar base64 inválido e timeout da IA (hoje viram erro 500) e reutilizar o `HttpClient`
 - [ ] Padronizar os status HTTP (401 para header ausente ou código inválido; 404/409 onde fizer sentido)
 - [ ] Acesso ao celular: a API precisa escutar na rede (não só em `localhost`) e o Android precisa permitir HTTP em texto claro nos testes locais
