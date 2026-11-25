@@ -2,11 +2,11 @@
 
 Aviso automático de encomendas para condomínios. O porteiro fotografa a etiqueta (Amazon, Mercado Livre, Correios...), a IA lê os dados, o sistema sugere o morador e, depois de confirmado, a entrega é registrada e pode ser retirada com um código.
 
-Esta é a versão **simples e didática** da API (POC): sem injeção de dependência, sem camadas separadas, cada caso de uso em uma classe e SQL escrito à mão.
+O projeto inclui a API e uma interface web para uso na portaria. Esta é uma versão **simples e didática** da solução (POC): sem injeção de dependência, sem camadas separadas, cada caso de uso em uma classe e SQL escrito à mão.
 
 ## Como funciona
 
-1. O app envia a foto da etiqueta em base64 (`POST /api/encomendas/etiqueta`).
+1. O frontend da portaria envia a foto da etiqueta em base64 (`POST /api/encomendas/etiqueta`).
 2. A API salva a foto, pede à IA (Groq ou Claude) para ler a etiqueta e procura a unidade e os moradores no banco.
 3. A API devolve a leitura, o `nivel` de confiança e até 5 `candidatos` de morador.
 4. O porteiro confirma o morador e a encomenda é registrada (`POST /api/encomendas/registrar`). A API devolve o **código de retirada**.
@@ -45,10 +45,17 @@ db/
   schema-encomendas.sql          banco, login da aplicação e tabelas
   procedures-condominio.sql      cadastrar condomínio e trocar código
   seed-dev.sql                   dados de teste (só desenvolvimento)
+  configuracao.sql               cria as configurações da IA e do armazenamento
+Chegou.FrontEnd/
+  index.html                    interface web da portaria (HTML, CSS e JavaScript puros)
 docs/
   Chegou.postman_collection.json collection de testes (Postman, também importa no Insomnia/Bruno)
+  Chegou.postman_console.json    console auxiliar da collection
   prompt-extracao-etiqueta.md    prompt usado na leitura da etiqueta
+  ImagensExemplo/               fotos usadas como exemplos
 ```
+
+O `Chegou.slnx` também organiza os scripts de banco, a documentação e o frontend na solução do Visual Studio.
 
 ### Convenções
 
@@ -224,12 +231,31 @@ Só a connection string fica no `Chegou.Api/appsettings.json` (é ela que dá ac
 
 ## Rodar
 
+### API
+
 ```bash
 dotnet restore
 dotnet run --project Chegou.Api
 ```
 
-A API sobe em `http://localhost:5234` (veja `Properties/launchSettings.json`).
+A API sobe em `http://localhost:5234` (veja `Properties/launchSettings.json`). O CORS está liberado na POC, permitindo que o frontend consulte a API a partir de outro endereço ou porta.
+
+### Frontend da portaria
+
+`Chegou.FrontEnd/index.html` é uma interface estática, sem npm ou dependências de build. Abra o arquivo em um navegador ou sirva a pasta com um servidor HTTP simples, por exemplo:
+
+```bash
+python -m http.server 8080 --directory Chegou.FrontEnd
+```
+
+Em seguida, acesse `http://localhost:8080`. Na tela de acesso, informe:
+
+- **URL da API:** `http://localhost:5234` em testes locais;
+- **Código do condomínio:** o código real ou `DEV-CHEGOU-CONDOMINIO-TESTE-0001` no ambiente de desenvolvimento.
+
+A URL da API e o código ficam armazenados no `localStorage` deste aparelho. Ao clicar no `?`, o usuário pode consultar um passo a passo visual do fluxo.
+
+O frontend permite tirar ou selecionar uma foto, confirmar o morador sugerido, registrar a encomenda, listar pendentes, buscar pela lista e registrar a retirada pelo código.
 
 Testar a lista de pendentes:
 
@@ -262,7 +288,6 @@ O header é enviado sozinho a partir da variável `codigoCondominio` (padrão: o
 
 - **Textos livres concatenados no SQL.** Valores normalizados (código do condomínio, ids, bloco, apartamento, apelido) são seguros. Já os textos livres (destinatário, transportadora, rastreio, `fotoPath` no registro e `retiradaPorNome` na retirada) entram concatenados: um nome com apóstrofo (D'Ávila) quebra o SQL com erro 500 e, em teoria, quem tem o código do condomínio consegue injetar SQL. Decisão da POC; antes de produção, passar para parâmetros (`SqlParameter`).
 - **Notificação** ao morador ainda não é enviada.
-- **Configuração** lida direto do `appsettings.json` em cada classe (sem user-secrets nem variáveis de ambiente).
 - O código de retirada (6 dígitos) não tem limite de tentativas.
 - **Chaves de API na tabela `Configuracao`:** legíveis por qualquer SQL executado com o login da API, inclusive por uma injeção nos textos livres acima. Use as variáveis de ambiente `CHEGOU_*` para as chaves ou parametrize o SQL.
 
