@@ -1,21 +1,20 @@
 using Chegou.Api.Models;
 using Chegou.Api.Services;
+using System.Data;
 using System.Text;
 
 namespace Chegou.Api.BancoDeDados
 {
     public partial class AcessoAoBancoDeDados
     {
-        public static async Task<Morador?> BuscarMorador(string condominioId, string modadorId, CancellationToken ct)
+        public static async Task<Morador?> BuscarMorador(string condominioId, string moradorId, CancellationToken ct)
         {
-            var retorno = new Morador();
-
             condominioId = TextoNormalizador.NormalizarNumero(condominioId);
             if (string.IsNullOrWhiteSpace(condominioId))
                 return null;
 
-            modadorId = TextoNormalizador.NormalizarNumero(modadorId);
-            if (string.IsNullOrWhiteSpace(modadorId))
+            moradorId = TextoNormalizador.NormalizarNumero(moradorId);
+            if (string.IsNullOrWhiteSpace(moradorId))
                 return null;
 
             var sql = new StringBuilder();
@@ -24,39 +23,33 @@ namespace Chegou.Api.BancoDeDados
             sql.Append(" SELECT Id, UnidadeId, Nome, NomeNorm, AceitaNotificacao ");
             sql.Append(" FROM Morador ");
             sql.Append(" WHERE CondominioId = " + condominioId);
-            sql.Append("       AND Id = " + modadorId);
+            sql.Append("       AND Id = " + moradorId);
 
             var banco = new SqlExtensions();
             var dtMorador = await banco.SelecionarAsync(sql.ToString(), ct);
-            if (dtMorador.Rows.Count > 0)
+            if (dtMorador.Rows.Count == 0)
+                return null;   // morador inexistente (ou de outro condomínio)
+
+            var row = dtMorador.Rows[0];
+
+            var retorno = new Morador
             {
-                var row = dtMorador.Rows[0];
+                Id = Convert.ToInt32(row["Id"]),
+                UnidadeId = Convert.ToInt32(row["UnidadeId"]),
+                Nome = row["Nome"].ToString() ?? string.Empty,
+                NomeNorm = row["NomeNorm"].ToString() ?? string.Empty,
+                AceitaNotificacao = Convert.ToBoolean(row["AceitaNotificacao"])
+            };
 
-                retorno.Id = Convert.ToInt32(row["Id"]);
-                retorno.UnidadeId = Convert.ToInt32(row["UnidadeId"]);
-                retorno.Nome = row["Nome"].ToString() ?? string.Empty;
-                retorno.NomeNorm = row["NomeNorm"].ToString() ?? string.Empty;
-                retorno.AceitaNotificacao = Convert.ToBoolean(row["AceitaNotificacao"]);
-            }
-            else
-            {
-                sql.Clear();
-                sql.Append(" SELECT ApelidoNorm ");
-                sql.Append(" FROM MoradorApelido ");
-                sql.Append(" WHERE MoradorId = " + modadorId);
+            // Apelidos já aprendidos: o Registrar usa a lista para não gravar o mesmo apelido de novo
+            sql.Clear();
+            sql.Append(" SELECT ApelidoNorm ");
+            sql.Append(" FROM MoradorApelido ");
+            sql.Append(" WHERE MoradorId = " + retorno.Id);
 
-                var dtMoradorApelido = await banco.SelecionarAsync(sql.ToString(), ct);
-                if (dtMoradorApelido.Rows.Count > 0)
-                {
-                    var row = dtMoradorApelido.Rows[0];
-
-                    retorno.ApelidosNorm.Add(row["ApelidoNorm"].ToString() ?? string.Empty);
-                }
-                else
-                {
-                    return null;
-                }
-            }
+            var dtApelidos = await banco.SelecionarAsync(sql.ToString(), ct);
+            foreach (DataRow linha in dtApelidos.Rows)
+                retorno.ApelidosNorm.Add(linha["ApelidoNorm"].ToString() ?? string.Empty);
 
             return retorno;
         }
