@@ -2,7 +2,7 @@
 -- Multi-tenant: todo registro carrega CondominioId.
 -- Datas e horas em HORA LOCAL do servidor SQL (GETDATE)
 
--- Arquivos do banco em /db
+-- Arquivos do banco em /databases (a pasta precisa existir e ser gravável pelo SQL Server).
 IF DB_ID(N'Chegou') IS NULL
     CREATE DATABASE [Chegou]
     ON PRIMARY
