@@ -55,26 +55,48 @@ namespace Chegou.Api.Controllers.Encomendas
             if (string.IsNullOrWhiteSpace(request.imgBase64))
                 return ("Imagem não informada", retorno);
 
-            using var ms = new MemoryStream();
-            var bytes = Convert.FromBase64String(request.imgBase64);
-            await ms.WriteAsync(bytes, 0, bytes.Length, ct);
+            // Aceita também o formato "data:image/jpeg;base64,...." (usa só o que vem depois da vírgula)
+            var imgBase64 = request.imgBase64.Trim();
+            if (imgBase64.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+            {
+                var virgula = imgBase64.IndexOf(',');
+                imgBase64 = virgula >= 0 ? imgBase64[(virgula + 1)..] : "";
+            }
+
+            // Base64 inválido vira mensagem de erro (400) em vez de exceção (500)
+            try
+            {
+                if (Convert.FromBase64String(imgBase64).Length == 0)
+                    return ("Imagem inválida (base64 incorreto).", retorno);
+            }
+            catch (FormatException)
+            {
+                return ("Imagem inválida (base64 incorreto).", retorno);
+            }
 
             //"image/jpeg",
             var mediaType = "image/jpeg";
 
-            var fotoPath = await Storage.SalvarAsync(condominioId, request.imgBase64, ct);
+            var fotoPath = await Storage.SalvarAsync(condominioId, imgBase64, ct);
 
             EtiquetaExtraida etiqueta;
             try
             {
                 //var claude = new Claude();
-                //etiqueta = await claude.ExtrairEtiquetaAsync(request.imgBase64, mediaType, ct);
+                //etiqueta = await claude.ExtrairEtiquetaAsync(imgBase64, mediaType, ct);
 
                 var groq = new Groq();
-                etiqueta = await groq.ExtrairEtiquetaAsync(request.imgBase64, mediaType, ct);
+                etiqueta = await groq.ExtrairEtiquetaAsync(imgBase64, mediaType, ct);
+            }
+            catch (TaskCanceledException) when (!ct.IsCancellationRequested)
+            {
+                // Estourou o tempo do HttpClient (não foi o cliente que cancelou a requisição)
+                return ("A leitura da etiqueta demorou demais. Tente novamente ou preencha manualmente.", retorno);
             }
             catch (Exception ex) when (ex is InvalidOperationException or HttpRequestException)
             {
+                // Mostra o motivo real (Groq/Claude, chave ausente...) no console da API; o cliente recebe só a mensagem simples
+                Console.Error.WriteLine("Falha ao ler a etiqueta: " + ex.Message);
                 return ("Não foi possível ler a etiqueta. Preencha manualmente.", retorno);
             }
 
