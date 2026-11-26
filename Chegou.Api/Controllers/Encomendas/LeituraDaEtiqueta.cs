@@ -82,11 +82,32 @@ namespace Chegou.Api.Controllers.Encomendas
             EtiquetaExtraida etiqueta;
             try
             {
-                //var claude = new Claude();
-                //etiqueta = await claude.ExtrairEtiquetaAsync(imgBase64, mediaType, ct);
+                // Provedor de IA vem da tabela Configuracao (chave IA:Provedor): Groq ou Claude
+                var provedor = (await Configuracao.ObterAsync("IA:Provedor", "Groq", ct)).Trim();
+                if (string.IsNullOrWhiteSpace(provedor))
+                    return ("IA:Provedor não configurado na tabela Configuracao.", retorno);
 
-                var groq = new Groq();
-                etiqueta = await groq.ExtrairEtiquetaAsync(imgBase64, mediaType, ct);
+                if (provedor.ToUpper() == "CLAUDE")
+                {
+                    // Claude não tem limite de tamanho, mas para minimizar o tráfego, reduzimos a foto antes de enviar.
+                    imgBase64 = await Storage.ReduzirFotoSeNecessarioAsync(imgBase64, 4, ct);
+
+                    var claude = new Claude();
+                    etiqueta = await claude.ExtrairEtiquetaAsync(imgBase64, mediaType, ct);
+                }
+                else if (provedor.ToUpper() == "GROQ")
+                {
+                    // Groq limita a 4MB, então reduzimos a foto antes de enviar (o Claude não tem limite)
+                    imgBase64 = await Storage.ReduzirFotoSeNecessarioAsync(imgBase64, 4, ct);
+
+                    var groq = new Groq();
+                    etiqueta = await groq.ExtrairEtiquetaAsync(imgBase64, mediaType, ct);
+                }
+                else
+                {
+                    return ("IA:Provedor inválido na tabela Configuracao: use Groq ou Claude.", retorno);
+                }
+
             }
             catch (TaskCanceledException) when (!ct.IsCancellationRequested)
             {

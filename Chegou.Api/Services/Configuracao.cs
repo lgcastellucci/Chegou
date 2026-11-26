@@ -7,7 +7,6 @@ namespace Chegou.Api.Services
     /// <summary>
     /// Lê as configurações da tabela Configuracao (Chave/Valor), com cache de 5 minutos.
     /// Só a connection string continua no appsettings.json (é ela que dá acesso ao banco).
-    /// Ordem de busca: variável de ambiente CHEGOU_{CHAVE} (":" vira "_", ex.: CHEGOU_GROQ_APIKEY) -> tabela -> valor padrão.
     /// </summary>
     public static class Configuracao
     {
@@ -19,10 +18,6 @@ namespace Chegou.Api.Services
             // A chave vem sempre do código (nunca do cliente), mas só aceitamos caracteres seguros por garantia.
             if (!Regex.IsMatch(chave, @"^[A-Za-z0-9:_.\-]+$"))
                 throw new ArgumentException("Chave de configuração inválida.", nameof(chave));
-
-            var ambiente = Environment.GetEnvironmentVariable("CHEGOU_" + chave.Replace(':', '_').ToUpperInvariant());
-            if (!string.IsNullOrWhiteSpace(ambiente))
-                return ambiente;
 
             if (!Cache.TryGetValue(chave, out var item) || item.Expira <= DateTime.UtcNow)
             {

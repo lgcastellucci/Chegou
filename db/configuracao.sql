@@ -15,10 +15,11 @@ IF OBJECT_ID(N'dbo.Configuracao', N'U') IS NULL
 GO
 
 -- Valores iniciais (só insere o que ainda não existe). As chaves de API ficam VAZIAS aqui:
--- preencha com a procedure dbo.ConfiguracaoDefinir, sem guardar a chave em nenhum arquivo do repositório.
+-- preencha com UPDATE direto na tabela (como administrador), sem guardar a chave em nenhum arquivo do repositório.
 INSERT INTO dbo.Configuracao (Chave, Valor, Descricao)
 SELECT v.Chave, v.Valor, v.Descricao
 FROM (VALUES
+    (N'IA:Provedor',   N'Groq',              N'Provedor de IA que lê a etiqueta: Groq ou Claude'),
     (N'Groq:ApiKey',   N'',                  N'Chave da API da Groq (leitura da etiqueta)'),
     (N'Groq:Model',    N'qwen/qwen3.8-27b',  N'Modelo da Groq usado na leitura da etiqueta'),
     (N'Claude:ApiKey', N'',                  N'Chave da API do Claude (alternativa à Groq)'),

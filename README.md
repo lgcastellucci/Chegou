@@ -206,6 +206,7 @@ Só a connection string fica no `Chegou.Api/appsettings.json` (é ela que dá ac
 
 | Chave | Para quê | Valor inicial |
 |---|---|---|
+| `IA:Provedor` | Provedor de IA que lê a etiqueta: Groq ou Claude | `Groq` |
 | `Groq:ApiKey` | chave da API da Groq (testes iniciais) | vazio |
 | `Groq:Model` | modelo da Groq. Confirme o ID no console da Groq | `qwen/qwen3.8-27b` |
 | `Claude:ApiKey` | chave da API do Claude (alternativa) | vazio |
@@ -223,11 +224,8 @@ Só a connection string fica no `Chegou.Api/appsettings.json` (é ela que dá ac
   FROM dbo.Configuracao ORDER BY Chave;
   ```
 - A API lê a tabela com **cache de 5 minutos**: a mudança vale em até 5 minutos ou ao reiniciar a API.
-- **Variável de ambiente (opcional):** `CHEGOU_{CHAVE}`, com `:` virando `_` (por exemplo `CHEGOU_GROQ_APIKEY`), tem prioridade sobre a tabela. Serve para manter as chaves fora do banco.
 - O login `chegou_app` só **lê** a tabela: o script aplica `DENY INSERT, UPDATE, DELETE` nela.
 - **Atenção às chaves no banco:** a API consegue ler a tabela, então qualquer SQL injection executado por ela também consegue (veja Limitações). Enquanto os textos livres seguirem concatenados, prefira as variáveis de ambiente para as chaves de API, ou parametrize o SQL antes de guardá-las na tabela.
-- A IA usada continua sendo escolhida em `LeituraDaEtiqueta.cs`: o trecho do `Groq` está ativo e o do `Claude` está comentado.
-- A Groq limita imagens em base64 a 4 MB: reduza a foto antes de enviar.
 
 ## Rodar
 
@@ -296,7 +294,5 @@ O header é enviado sozinho a partir da variável `codigoCondominio` (padrão: o
 - [ ] Enviar a notificação (push) ao morador no registro
 - [ ] Tratar base64 inválido e timeout da IA (hoje viram erro 500) e reutilizar o `HttpClient`
 - [ ] Padronizar os status HTTP (401 para header ausente ou código inválido; 404/409 onde fizer sentido)
-- [ ] Acesso ao celular: a API precisa escutar na rede (não só em `localhost`) e o Android precisa permitir HTTP em texto claro nos testes locais
 - [ ] Job de retenção: apagar fotos depois de `Condominio.RetencaoFotoDias` (LGPD)
-- [ ] Testes do `MatchService` e documentação da API (Swagger), se voltarem ao projeto
 - [ ] Parametrizar o SQL (`SqlParameter`), principalmente nos textos livres, para guardar as chaves de API na tabela com segurança

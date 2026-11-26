@@ -83,8 +83,7 @@ namespace Chegou.Api.Services
 
             try
             {
-                return JsonSerializer.Deserialize<EtiquetaExtraida>(texto)
-                    ?? throw new InvalidOperationException("A Groq não devolveu dados da etiqueta.");
+                return JsonSerializer.Deserialize<EtiquetaExtraida>(texto) ?? throw new InvalidOperationException("A Groq não devolveu dados da etiqueta.");
             }
             catch (JsonException ex)
             {
