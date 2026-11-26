@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Chegou API",
-    "description": "Collection de testes da API Chegou (versão simples/didática).\n\nAntes de rodar: banco criado com db/schema-encomendas.sql, procedures com db/procedures-condominio.sql e dados de teste com db/seed-dev.sql; API rodando (dotnet run). Ajuste a variável baseUrl se a porta for outra.\n\nTodas as rotas exigem o header X-Condominio-Id com o CÓDIGO do condomínio (coluna Condominio.Codigo, não o Id do banco). A collection envia o header sozinha a partir da variável {{codigoCondominio}} (padrão: o código de teste do seed).\n\nNesta versão todo erro volta como 400 com uma mensagem em texto simples (não há 401, 404 nem 409).\n\nPasta 0: identificação do condomínio. Pasta 1: fluxo completo sem IA. Pasta 2: leitura da etiqueta (precisa da variável imgBase64 e de chave da Groq/Claude). Pasta 3: aprendizado de apelido. Pasta 4: casos de erro.",
+    "description": "Collection de testes da API Chegou (versão simples/didática).\n\nAntes de rodar: banco criado com db/schema-encomendas.sql, db/procedures-condominio.sql, db/configuracao.sql e dados de teste com db/seed-dev.sql; API rodando (dotnet run). Ajuste a variável baseUrl se a porta ou o endereço forem outros.\n\nTodas as rotas da API exigem o header X-Condominio-Id com o CÓDIGO do condomínio (coluna Condominio.Codigo, não o Id do banco). A collection envia o header sozinha a partir da variável {{codigoCondominio}} (padrão: o código de teste do seed).\n\nTodo erro volta como 400 com uma mensagem em texto simples (não há 401, 404 nem 409).\n\nO código de retirada não volta na resposta do registro: para testar a retirada com o código correto, use a pasta 5 (o código é lido do banco e colado na variável codigoRetirada).\n\nPastas: 0 identificação e acesso; 1 fluxo sem IA; 2 leitura da etiqueta (IA, precisa da variável imgBase64); 3 aprendizado de apelido; 4 casos de erro; 5 retirada com o código (manual).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -26,8 +26,8 @@
   },
   "item": [
     {
-      "name": "0. Identificação do condomínio",
-      "description": "Regra do header X-Condominio-Id. Nesta versão da API todo erro volta como 400 com uma mensagem em texto (não há 401).",
+      "name": "0. Identificação do condomínio e acesso",
+      "description": "Regra do header X-Condominio-Id. Todo erro da API volta como 400 com mensagem em texto simples (não há 401, 404 nem 409).",
       "item": [
         {
           "name": "0.1 Sem o header (400)",
@@ -56,7 +56,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
-                  "pm.test(\"Mensagem de header ausente\", () => pm.expect(pm.response.text()).to.include(\"Header não encontrado\"));"
+                  "pm.test(\"Mensagem: Header não encontrado\", () => pm.expect(pm.response.text()).to.include(\"Header não encontrado\"));"
                 ]
               }
             }
@@ -106,7 +106,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
-                  "pm.test(\"Condomínio não encontrado\", () => pm.expect(pm.response.text()).to.include(\"Condominio não encontrado\"));"
+                  "pm.test(\"Mensagem: Condominio não encontrado\", () => pm.expect(pm.response.text()).to.include(\"Condominio não encontrado\"));"
                 ]
               }
             }
@@ -148,7 +148,7 @@
                 }
               ]
             },
-            "description": "O código é normalizado (só letras, números e hífen) antes de entrar no SQL. Este teste garante que aspas e espaços não passam."
+            "description": "O código é normalizado (só letras, números e hífen) antes de entrar no SQL. Aspas e espaços não passam."
           },
           "event": [
             {
@@ -157,7 +157,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"400 Bad Request (não pode devolver dados)\", () => pm.response.to.have.status(400));",
-                  "pm.test(\"Condomínio não encontrado\", () => pm.expect(pm.response.text()).to.include(\"Condominio não encontrado\"));"
+                  "pm.test(\"Mensagem: Condominio não encontrado\", () => pm.expect(pm.response.text()).to.include(\"Condominio não encontrado\"));"
                 ]
               }
             }
@@ -193,12 +193,92 @@
               }
             }
           ]
+        },
+        {
+          "name": "0.5 Página de documentação na raiz (200)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                ""
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "A raiz da API serve a página de documentação (HomeController), sem exigir o header."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"É HTML\", () => pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"text/html\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "0.6 CORS: preflight do front (204)",
+          "request": {
+            "method": "OPTIONS",
+            "header": [
+              {
+                "key": "Origin",
+                "value": "https://exemplo.com"
+              },
+              {
+                "key": "Access-Control-Request-Method",
+                "value": "GET"
+              },
+              {
+                "key": "Access-Control-Request-Headers",
+                "value": "x-condominio-id"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/encomendas/pendentes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "encomendas",
+                "pendentes"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Simula o que o navegador faz antes de chamar a API a partir do front hospedado em outro endereço (CORS aberto na POC)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Preflight aceito (204)\", () => pm.response.to.have.status(204));",
+                  "pm.test(\"Libera a origem\", () => pm.expect(pm.response.headers.has(\"Access-Control-Allow-Origin\")).to.be.true);",
+                  "pm.test(\"Libera o header X-Condominio-Id\", () => pm.expect((pm.response.headers.get(\"Access-Control-Allow-Headers\") || \"\").toLowerCase()).to.include(\"x-condominio-id\"));"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
     {
-      "name": "1. Fluxo completo (sem IA)",
-      "description": "Roda sem chave de IA. Exige o seed-dev.sql aplicado (morador 1 = Maria da Silva, bloco A, apto 101). Execute em ordem (Run collection).",
+      "name": "1. Fluxo sem IA (registrar e conferir)",
+      "description": "Roda sem chave de IA. Exige o seed-dev.sql aplicado (morador 1 = Maria da Silva, bloco A, apto 101). Execute em ordem. A retirada com o código correto está na pasta 5, porque o código de retirada NÃO volta na resposta do registro.",
       "item": [
         {
           "name": "1.1 Listar pendentes",
@@ -260,7 +340,7 @@
                 }
               }
             },
-            "description": "Usa o morador 1 do seed-dev.sql. Guarda o id e o código de retirada nas variáveis da collection."
+            "description": "Usa o morador 1 do seed. Guarda o id da encomenda. O código de retirada fica só no banco (SELECT CodigoRetirada FROM Encomenda WHERE Id = <idEncomenda>)."
           },
           "event": [
             {
@@ -270,13 +350,9 @@
                 "exec": [
                   "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
                   "const r = pm.response.json();",
-                  "pm.test(\"Tem idEncomenda e código de retirada de 6 dígitos\", () => {",
-                  "  pm.expect(r.idEncomenda).to.be.a(\"number\");",
-                  "  pm.expect(r.codigoRetirada).to.match(/^\\d{6}$/);",
-                  "});",
+                  "pm.test(\"Devolve idEncomenda e status\", () => { pm.expect(r.idEncomenda).to.be.a(\"number\"); pm.expect(r.idEncomenda).to.be.above(0); });",
                   "pm.test(\"Morador aceita notificação -> NOTIFICADA\", () => pm.expect(r.status).to.eql(\"NOTIFICADA\"));",
-                  "pm.collectionVariables.set(\"encomendaId\", r.idEncomenda);",
-                  "pm.collectionVariables.set(\"codigoRetirada\", r.codigoRetirada);"
+                  "pm.collectionVariables.set(\"encomendaId\", r.idEncomenda);"
                 ]
               }
             }
@@ -313,7 +389,8 @@
                   "  pm.expect(item.morador).to.eql(\"Maria da Silva\");",
                   "  pm.expect(item.bloco).to.eql(\"A\");",
                   "  pm.expect(item.numero).to.eql(\"101\");",
-                  "});"
+                  "});",
+                  "pm.test(\"Status NOTIFICADA e recebidaEm preenchido\", () => { pm.expect(item.status).to.eql(\"NOTIFICADA\"); pm.expect(item.recebidaEm).to.be.a(\"string\").and.not.empty; });"
                 ]
               }
             }
@@ -358,128 +435,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
-                  "pm.test(\"Código de retirada inválido\", () => pm.expect(pm.response.text()).to.include(\"inválido\"));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "1.5 Retirar com o código correto (200)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/encomendas/{{encomendaId}}/retirar",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "encomendas",
-                "{{encomendaId}}",
-                "retirar"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"codigo\": \"{{codigoRetirada}}\",\n  \"retiradaPorNome\": \"Maria da Silva\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
-                  "const r = pm.response.json();",
-                  "pm.test(\"Status RETIRADA\", () => { pm.expect(r.status).to.eql(\"RETIRADA\"); pm.expect(r.idEncomenda).to.eql(Number(pm.collectionVariables.get(\"encomendaId\"))); });"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "1.6 Retirar de novo (400)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/encomendas/{{encomendaId}}/retirar",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "encomendas",
-                "{{encomendaId}}",
-                "retirar"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"codigo\": \"{{codigoRetirada}}\",\n  \"retiradaPorNome\": \"Maria da Silva\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
-                  "pm.test(\"Encomenda já retirada\", () => pm.expect(pm.response.text()).to.include(\"já retirada\"));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "1.7 Listar pendentes (não deve conter mais)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/encomendas/pendentes",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "encomendas",
-                "pendentes"
-              ]
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const id = Number(pm.collectionVariables.get(\"encomendaId\"));",
-                  "pm.test(\"Encomenda saiu da lista\", () => pm.expect(pm.response.json().some(e => e.id === id)).to.be.false);"
+                  "pm.test(\"Mensagem: Codigo de retirada inválido\", () => pm.expect(pm.response.text()).to.include(\"Codigo de retirada inválido\"));"
                 ]
               }
             }
@@ -489,7 +445,7 @@
     },
     {
       "name": "2. Leitura da etiqueta (usa a IA)",
-      "description": "Requer chave da Groq (ou do Claude) no appsettings e uma foto real de etiqueta em base64 na variável {{imgBase64}}. Fluxo igual ao do app: ler a etiqueta, registrar com o morador sugerido e retirar.",
+      "description": "Requer a chave do provedor de IA na tabela Configuracao (IA:Provedor = Groq ou Claude) e uma foto real de etiqueta em base64 na variável {{imgBase64}}. Fluxo do app: ler a etiqueta e registrar com o morador sugerido. Para retirar, use a pasta 5.",
       "item": [
         {
           "name": "2.1 Ler a etiqueta (foto em base64)",
@@ -521,7 +477,7 @@
                 }
               }
             },
-            "description": "Para gerar o base64 no PowerShell e copiar para a área de transferência:\n[Convert]::ToBase64String([IO.File]::ReadAllBytes(\"etiqueta.jpg\")) | Set-Clipboard\n\nCole o resultado no valor atual (current value) da variável imgBase64. Só o texto base64, sem o prefixo data:image. A Groq aceita imagens de até 4 MB em base64: reduza a foto antes. Se a leitura falhar, a API responde 400 com a mensagem."
+            "description": "Para gerar o base64 no PowerShell e copiar para a área de transferência:\n[Convert]::ToBase64String([IO.File]::ReadAllBytes(\"etiqueta.jpg\")) | Set-Clipboard\n\nCole o resultado no valor atual (current value) da variável imgBase64. Pode ser só o texto base64 ou o formato data:image/jpeg;base64,... (a API aceita os dois). A Groq aceita imagens de até 4 MB em base64: reduza a foto antes. Se a IA falhar ou demorar demais, a API responde 400 com a mensagem."
           },
           "event": [
             {
@@ -600,57 +556,8 @@
                 "exec": [
                   "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
                   "const r = pm.response.json();",
-                  "pm.test(\"Tem idEncomenda e código de retirada\", () => {",
-                  "  pm.expect(r.idEncomenda).to.be.a(\"number\");",
-                  "  pm.expect(r.codigoRetirada).to.match(/^\\d{6}$/);",
-                  "});",
-                  "pm.collectionVariables.set(\"encomendaId\", r.idEncomenda);",
-                  "pm.collectionVariables.set(\"codigoRetirada\", r.codigoRetirada);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "2.3 Retirar com o código recebido",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/encomendas/{{encomendaId}}/retirar",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "encomendas",
-                "{{encomendaId}}",
-                "retirar"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"codigo\": \"{{codigoRetirada}}\",\n  \"retiradaPorNome\": \"Teste Postman\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"Status RETIRADA\", () => pm.expect(pm.response.json().status).to.eql(\"RETIRADA\"));"
+                  "pm.test(\"Devolve idEncomenda e status\", () => { pm.expect(r.idEncomenda).to.be.a(\"number\"); pm.expect([\"NOTIFICADA\", \"RECEBIDA\"]).to.include(r.status); });",
+                  "pm.collectionVariables.set(\"encomendaId\", r.idEncomenda);"
                 ]
               }
             }
@@ -660,7 +567,7 @@
     },
     {
       "name": "3. Aprendizado de apelido",
-      "description": "Simula o porteiro escolhendo manualmente um morador diferente do sugerido. O nome lido na etiqueta vira apelido do morador. Confira no banco: SELECT * FROM MoradorApelido;",
+      "description": "Simula o porteiro escolhendo manualmente um morador diferente do sugerido. O nome lido na etiqueta vira apelido do morador.",
       "item": [
         {
           "name": "3.1 Registrar escolhendo morador diferente do sugerido",
@@ -692,7 +599,7 @@
                 }
               }
             },
-            "description": "Usa o morador 2 (João Pedro Oliveira) do seed. O porteiro escolhe um morador diferente do sugerido (moradorSugeridoId nulo), então o nome lido na etiqueta ('JP Oliveira') é gravado em MoradorApelido como 'JP OLIVEIRA'. Confira no banco: SELECT * FROM MoradorApelido;"
+            "description": "Usa o morador 2 (João Pedro Oliveira) do seed. O nome 'JP Oliveira' é gravado em MoradorApelido como 'JP OLIVEIRA'. Confira no banco: SELECT * FROM MoradorApelido; Registrar de novo o mesmo apelido não duplica a linha."
           },
           "event": [
             {
@@ -701,18 +608,20 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
-                  "if (pm.response.code === 200) {",
-                  "  const r = pm.response.json();",
-                  "  pm.collectionVariables.set(\"encomendaIdApelido\", r.idEncomenda);",
-                  "  pm.collectionVariables.set(\"codigoApelido\", r.codigoRetirada);",
-                  "}"
+                  "pm.test(\"Devolve idEncomenda\", () => pm.expect(pm.response.json().idEncomenda).to.be.a(\"number\"));"
                 ]
               }
             }
           ]
-        },
+        }
+      ]
+    },
+    {
+      "name": "4. Casos de erro",
+      "description": "Todos devolvem 400 com texto simples.",
+      "item": [
         {
-          "name": "3.2 Retirar a encomenda do teste (limpa os pendentes)",
+          "name": "4.1 Registrar sem o header (400)",
           "request": {
             "method": "POST",
             "header": [
@@ -722,20 +631,22 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/encomendas/{{encomendaIdApelido}}/retirar",
+              "raw": "{{baseUrl}}/api/encomendas/registrar",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
                 "encomendas",
-                "{{encomendaIdApelido}}",
-                "retirar"
+                "registrar"
               ]
+            },
+            "auth": {
+              "type": "noauth"
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"codigo\": \"{{codigoApelido}}\",\n  \"retiradaPorNome\": \"Teste Postman\"\n}",
+              "raw": "{\n  \"fotoPath\": null,\n  \"etiqueta\": {\n    \"transportadora\": \"CORREIOS\",\n    \"destinatario\": \"Maria da Silva\",\n    \"bloco\": \"A\",\n    \"apartamento\": \"101\",\n    \"rastreio\": \"AA123456789BR\",\n    \"confianca\": 0.95,\n    \"problemas\": []\n  },\n  \"moradorId\": 1,\n  \"moradorSugeridoId\": 1,\n  \"scoreMatch\": 1.0\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -749,19 +660,15 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));"
+                  "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Mensagem: Header não encontrado\", () => pm.expect(pm.response.text()).to.include(\"Header não encontrado\"));"
                 ]
               }
             }
           ]
-        }
-      ]
-    },
-    {
-      "name": "4. Casos de erro",
-      "item": [
+        },
         {
-          "name": "4.1 Registrar com morador inexistente (400)",
+          "name": "4.2 Registrar com morador inexistente (400)",
           "request": {
             "method": "POST",
             "header": [
@@ -798,52 +705,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
-                  "pm.test(\"Morador não encontrado\", () => pm.expect(pm.response.text()).to.include(\"Morador não encontrado\"));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "4.2 Retirar encomenda inexistente (400)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/encomendas/999999999/retirar",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "encomendas",
-                "999999999",
-                "retirar"
-              ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"codigo\": \"123456\",\n  \"retiradaPorNome\": \"Fulano\"\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
-                  "pm.test(\"Encomenda não encontrada\", () => pm.expect(pm.response.text()).to.include(\"Encomenda não encontrada\"));"
+                  "pm.test(\"Mensagem: Morador não encontrado\", () => pm.expect(pm.response.text()).to.include(\"Morador não encontrado\"));"
                 ]
               }
             }
@@ -893,7 +755,52 @@
           ]
         },
         {
-          "name": "4.4 Ler etiqueta sem imagem (400)",
+          "name": "4.4 Retirar encomenda inexistente (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/encomendas/999999999/retirar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "encomendas",
+                "999999999",
+                "retirar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"123456\",\n  \"retiradaPorNome\": \"Fulano\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Mensagem: Encomenda não encontrada\", () => pm.expect(pm.response.text()).to.include(\"Encomenda não encontrada\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.5 Ler etiqueta sem imagem (400)",
           "request": {
             "method": "POST",
             "header": [
@@ -930,7 +837,201 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
-                  "pm.test(\"Imagem não informada\", () => pm.expect(pm.response.text()).to.include(\"Imagem não informada\"));"
+                  "pm.test(\"Mensagem: Imagem não informada\", () => pm.expect(pm.response.text()).to.include(\"Imagem não informada\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.6 Ler etiqueta com base64 inválido (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/encomendas/etiqueta",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "encomendas",
+                "etiqueta"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"imgBase64\": \"isto não é base64!!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Antes da correção, base64 inválido derrubava a requisição com erro 500. Não chama a IA."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Mensagem: Imagem inválida\", () => pm.expect(pm.response.text()).to.include(\"Imagem inválida\"));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Retirada com o código (manual)",
+      "description": "O código de retirada não é devolvido pela API: hoje ele só existe no banco (e deveria chegar ao morador por notificação, ainda não implementada). Antes de rodar esta pasta: 1) rode a pasta 1 ou 2 (guarda {{encomendaId}}); 2) consulte o código: SELECT CodigoRetirada FROM Encomenda WHERE Id = <encomendaId>; 3) cole o resultado no valor atual da variável codigoRetirada.",
+      "item": [
+        {
+          "name": "5.1 Retirar com o código correto (200)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/encomendas/{{encomendaId}}/retirar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "encomendas",
+                "{{encomendaId}}",
+                "retirar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"{{codigoRetirada}}\",\n  \"retiradaPorNome\": \"Maria da Silva\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"codigoRetirada\")) {",
+                  "  throw new Error(\"Defina a variável codigoRetirada com o código da encomenda: SELECT CodigoRetirada FROM Encomenda WHERE Id = \" + pm.collectionVariables.get(\"encomendaId\"));",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 OK\", () => pm.response.to.have.status(200));",
+                  "const r = pm.response.json();",
+                  "pm.test(\"Status RETIRADA\", () => { pm.expect(r.status).to.eql(\"RETIRADA\"); pm.expect(r.idEncomenda).to.eql(Number(pm.collectionVariables.get(\"encomendaId\"))); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.2 Retirar de novo (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/encomendas/{{encomendaId}}/retirar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "encomendas",
+                "{{encomendaId}}",
+                "retirar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"{{codigoRetirada}}\",\n  \"retiradaPorNome\": \"Maria da Silva\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.collectionVariables.get(\"codigoRetirada\")) {",
+                  "  throw new Error(\"Defina a variável codigoRetirada com o código da encomenda: SELECT CodigoRetirada FROM Encomenda WHERE Id = \" + pm.collectionVariables.get(\"encomendaId\"));",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"400 Bad Request\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Mensagem: já retirada\", () => pm.expect(pm.response.text()).to.include(\"já retirada\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.3 Listar pendentes (não deve conter mais)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/encomendas/pendentes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "encomendas",
+                "pendentes"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const id = Number(pm.collectionVariables.get(\"encomendaId\"));",
+                  "pm.test(\"Encomenda saiu da lista\", () => pm.expect(pm.response.json().some(e => e.id === id)).to.be.false);"
                 ]
               }
             }
@@ -978,14 +1079,6 @@
     },
     {
       "key": "codigoRetirada",
-      "value": ""
-    },
-    {
-      "key": "encomendaIdApelido",
-      "value": ""
-    },
-    {
-      "key": "codigoApelido",
       "value": ""
     }
   ]
