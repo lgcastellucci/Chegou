@@ -1,5 +1,4 @@
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Processing;
+using SkiaSharp;
 
 namespace Chegou.Api.Services
 {
@@ -27,21 +26,45 @@ namespace Chegou.Api.Services
             return Convert.ToBase64String(bytes);
         }
 
-        public static async Task<string> ReduzirFotoSeNecessarioAsync(string imgBase64, int lengthInMB, CancellationToken ct)
+        public static Task<string> ReduzirFotoSeNecessarioAsync(string imgBase64, int lengthInMB, CancellationToken ct)
         {
-            var bytes = Convert.FromBase64String(imgBase64);
-            if (bytes.Length <= lengthInMB * 1024 * 1024) // lengthInMB MB
-                return imgBase64;
+            ArgumentOutOfRangeException.ThrowIfNegativeOrZero(lengthInMB);
+            ct.ThrowIfCancellationRequested();
 
-            using var inputStream = new MemoryStream(bytes);
-            using var image = await Image.LoadAsync(inputStream, ct);
-            var scale = Math.Sqrt((lengthInMB * 1024 * 1024) / (double)bytes.Length);
-            var width = (int)(image.Width * scale);
-            var height = (int)(image.Height * scale);
-            image.Mutate(x => x.Resize(width, height));
-            using var outputStream = new MemoryStream();
-            await image.SaveAsJpegAsync(outputStream, ct);
-            return Convert.ToBase64String(outputStream.ToArray());
+            var bytes = Convert.FromBase64String(imgBase64);
+            long maxBytes = (long)lengthInMB * 1024 * 1024;
+            if (bytes.Length <= maxBytes)
+                return Task.FromResult(imgBase64);
+
+            using var data = SKData.CreateCopy(bytes);
+            using var codec = SKCodec.Create(data)
+                ?? throw new InvalidOperationException("Não foi possível decodificar a imagem.");
+            using var original = SKBitmap.Decode(codec)
+                ?? throw new InvalidOperationException("Não foi possível decodificar a imagem.");
+            int width = original.Width;
+            int height = original.Height;
+
+            while (true)
+            {
+                ct.ThrowIfCancellationRequested();
+                using var resized = new SKBitmap(width, height);
+                if (!original.ScalePixels(resized, new SKSamplingOptions(SKFilterMode.Linear)))
+                    throw new InvalidOperationException("Não foi possível redimensionar a imagem.");
+
+                using var image = SKImage.FromBitmap(resized);
+                using var encoded = image.Encode(SKEncodedImageFormat.Jpeg, 85)
+                    ?? throw new InvalidOperationException("Não foi possível codificar a imagem em JPEG.");
+                ct.ThrowIfCancellationRequested();
+                if (encoded.Size <= maxBytes)
+                    return Task.FromResult(Convert.ToBase64String(encoded.ToArray()));
+
+                if (width == 1 && height == 1)
+                    throw new InvalidOperationException("Não foi possível reduzir a imagem ao tamanho solicitado.");
+
+                double scale = Math.Min(0.85, Math.Sqrt(maxBytes / (double)encoded.Size) * 0.9);
+                width = Math.Max(1, (int)(width * scale));
+                height = Math.Max(1, (int)(height * scale));
+            }
         }
     }
 }

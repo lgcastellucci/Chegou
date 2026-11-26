@@ -13,6 +13,8 @@ O projeto inclui a API e uma interface web para uso na portaria. Esta é uma ver
 5. A encomenda aparece em `GET /api/encomendas/pendentes`.
 6. Na retirada, informa-se o código (`POST /api/encomendas/{id}/retirar`) e a encomenda sai da lista.
 
+A foto original é armazenada. Antes do envio à IA, imagens acima de 4 MiB (bytes decodificados, não o tamanho do texto base64) são reduzidas e codificadas em JPEG até caber nesse limite. O processamento usa SkiaSharp; o projeto inclui os componentes nativos para Windows e Linux.
+
 [Documentação da API](https://htmlpreview.github.io/?https://github.com/lgcastellucci/Chegou/blob/main/Chegou.Api/Documentacao/index.html)
 ## Estrutura
 
