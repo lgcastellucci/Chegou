@@ -9,7 +9,7 @@ O projeto inclui a API e uma interface web para uso na portaria. Esta é uma ver
 1. O frontend da portaria envia a foto da etiqueta em base64 (`POST /api/encomendas/etiqueta`).
 2. A API salva a foto, pede à IA (Groq ou Claude) para ler a etiqueta e procura a unidade e os moradores no banco.
 3. A API devolve a leitura, o `nivel` de confiança e até 5 `candidatos` de morador.
-4. O porteiro confirma o morador e a encomenda é registrada (`POST /api/encomendas/registrar`). A API devolve o **código de retirada**.
+4. O porteiro confirma o morador e a encomenda é registrada (`POST /api/encomendas/registrar`). A API gera o **código de retirada** e o grava no banco. Ele **não é devolvido na resposta**: deve chegar ao morador pela notificação, que ainda não é enviada.
 5. A encomenda aparece em `GET /api/encomendas/pendentes`.
 6. Na retirada, informa-se o código (`POST /api/encomendas/{id}/retirar`) e a encomenda sai da lista.
 
@@ -52,7 +52,6 @@ Chegou.FrontEnd/
   index.html                    interface web da portaria (HTML, CSS e JavaScript puros)
 docs/
   Chegou.postman_collection.json collection de testes (Postman, também importa no Insomnia/Bruno)
-  Chegou.postman_console.json    console auxiliar da collection
   prompt-extracao-etiqueta.md    prompt usado na leitura da etiqueta
   ImagensExemplo/               fotos usadas como exemplos
 ```
@@ -115,11 +114,15 @@ Nesta versão **todo erro é `400` com uma mensagem em texto simples** (não há
 | `Header não encontrado` | falta o `X-Condominio-Id` |
 | `Condominio não encontrado` | código desconhecido |
 | `Imagem não informada` | `imgBase64` vazio |
-| `Não foi possível ler a etiqueta. Preencha manualmente.` | falha na IA |
+| `Imagem inválida (base64 incorreto).` | `imgBase64` não é um base64 válido |
+| `Não foi possível ler a etiqueta. Preencha manualmente.` | falha na IA (o motivo real aparece no console da API) |
+| `A leitura da etiqueta demorou demais. Tente novamente ou preencha manualmente.` | a IA não respondeu dentro do tempo limite |
+| `IA:Provedor não configurado na tabela Configuracao.` / `IA:Provedor inválido na tabela Configuracao: use Groq ou Claude.` | configuração `IA:Provedor` vazia ou com outro valor |
 | `Morador não encontrado` | `moradorId` inválido no registro |
 | `Encomenda não encontrada` | id inexistente na retirada |
 | `Codigo de retirada inválido` | código de retirada errado |
 | `Encomenda já retirada ou devolvida` | retirada repetida |
+| `Não foi possível iniciar/confirmar/desfazer a transação do registro.` e `Não foi possível obter o identificador da encomenda registrada.` | falha ao gravar o registro (a transação é desfeita quando possível) |
 
 Corpo JSON inválido ou incompleto também devolve `400` (validação automática do ASP.NET).
 
@@ -128,7 +131,7 @@ Corpo JSON inválido ou incompleto também devolve `400` (validação automátic
 Corpo:
 
 ```json
-{ "imgBase64": "<foto em base64, só o texto, sem o prefixo data:image>" }
+{ "imgBase64": "<foto em base64; aceita também o formato data:image/jpeg;base64,...>" }
 ```
 
 Resposta 200:
@@ -168,10 +171,11 @@ Corpo:
 Resposta 200:
 
 ```json
-{ "idEncomenda": 3, "status": "NOTIFICADA", "codigoRetirada": "889841" }
+{ "idEncomenda": 3, "status": "NOTIFICADA" }
 ```
 
 - `status` é `NOTIFICADA` quando o morador aceita notificação; senão, `RECEBIDA`. **O envio real da notificação (push) ainda não existe**: hoje só o status é gravado.
+- **Código de retirada:** a API gera um código de 6 dígitos e o grava em `Encomenda.CodigoRetirada`. Ele **não é devolvido** na resposta; a intenção é que chegue ao morador pela notificação (ainda não implementada). Enquanto isso, só se consulta no banco: `SELECT CodigoRetirada FROM Encomenda WHERE Id = <idEncomenda>;`
 - **Aprendizado de apelido:** se `moradorSugeridoId` for diferente de `moradorId` (ou nulo), o nome lido na etiqueta é gravado em `MoradorApelido`, e nas próximas leituras o match acerta melhor.
 - A encomenda e o apelido são gravados na mesma transação.
 
@@ -215,19 +219,24 @@ Só a connection string fica no `Chegou.Api/appsettings.json` (é ela que dá ac
 | `Claude:Model` | modelo do Claude | `claude-haiku-5-5` |
 | `Storage:Path` | pasta das fotos (ignorada pelo git) | `storage` |
 
-- **Alterar** (como administrador):
+- **Alterar** (como administrador, direto na tabela):
   ```sql
-  EXEC dbo.ConfiguracaoDefinir @Chave = N'Groq:ApiKey', @Valor = N'<chave>';
+  UPDATE dbo.Configuracao SET Valor = N'<chave>', AtualizadoEm = GETDATE() WHERE Chave = N'Groq:ApiKey';
   ```
-  O retorno não mostra o valor das chaves de API. A chave nunca precisa passar por arquivo do repositório.
+  A chave nunca precisa passar por arquivo do repositório.
 - **Ver** sem expor as chaves:
   ```sql
   SELECT Chave, CASE WHEN Chave LIKE N'%ApiKey%' AND ISNULL(Valor, N'') <> N'' THEN N'********' ELSE Valor END AS Valor, Descricao, AtualizadoEm
   FROM dbo.Configuracao ORDER BY Chave;
   ```
 - A API lê a tabela com **cache de 5 minutos**: a mudança vale em até 5 minutos ou ao reiniciar a API.
+- **Escolher a IA:** a configuração `IA:Provedor` define quem lê a etiqueta (`Groq` ou `Claude`), sem alterar código:
+  ```sql
+  UPDATE dbo.Configuracao SET Valor = N'Claude', AtualizadoEm = GETDATE() WHERE Chave = N'IA:Provedor';
+  ```
+  O `Claude:ApiKey` (ou o `Groq:ApiKey`) do provedor escolhido precisa estar preenchido.
 - O login `chegou_app` só **lê** a tabela: o script aplica `DENY INSERT, UPDATE, DELETE` nela.
-- **Atenção às chaves no banco:** a API consegue ler a tabela, então qualquer SQL injection executado por ela também consegue (veja Limitações). Enquanto os textos livres seguirem concatenados, prefira as variáveis de ambiente para as chaves de API, ou parametrize o SQL antes de guardá-las na tabela.
+- **Atenção às chaves no banco:** a API consegue ler a tabela, então qualquer SQL injection executado por ela também consegue (veja Limitações). As chaves ficam só na tabela (a leitura por variável de ambiente foi removida): restrinja o acesso ao banco e parametrize o SQL, principalmente os textos livres, antes de levar a API para produção.
 
 ## Rodar
 
@@ -274,27 +283,28 @@ Invoke-RestMethod -Method Post -Uri http://localhost:5234/api/encomendas/etiquet
 
 ### Collection do Postman
 
-`docs/Chegou.postman_collection.json` tem 5 pastas com testes automáticos:
+`docs/Chegou.postman_collection.json` tem 6 pastas com testes automáticos:
 
-1. **Identificação do condomínio:** header ausente, código inexistente, tentativa de SQL injection e código válido.
-2. **Fluxo completo sem IA:** registrar, listar, retirar (com código errado, certo e repetido). Precisa do `seed-dev.sql`.
-3. **Leitura da etiqueta:** usa a IA. Cole a foto em base64 na variável `imgBase64` da collection.
-4. **Aprendizado de apelido.**
-5. **Casos de erro.**
+0. **Identificação do condomínio e acesso:** header ausente, código inexistente, tentativa de SQL injection, código válido, página de documentação na raiz e preflight de CORS.
+1. **Fluxo sem IA:** registrar, listar pendentes e retirar com código errado. Precisa do `seed-dev.sql`.
+2. **Leitura da etiqueta:** usa a IA. Cole a foto em base64 na variável `imgBase64` da collection.
+3. **Aprendizado de apelido.**
+4. **Casos de erro:** inclui imagem vazia e base64 inválido.
+5. **Retirada com o código (manual):** o código de retirada não é devolvido pela API. Consulte-o no banco (`SELECT CodigoRetirada FROM Encomenda WHERE Id = <encomendaId>`) e cole na variável `codigoRetirada` antes de rodar a pasta.
 
 O header é enviado sozinho a partir da variável `codigoCondominio` (padrão: o código de teste do seed).
 
 ## Limitações conhecidas (POC)
 
 - **Textos livres concatenados no SQL.** Valores normalizados (código do condomínio, ids, bloco, apartamento, apelido) são seguros. Já os textos livres (destinatário, transportadora, rastreio, `fotoPath` no registro e `retiradaPorNome` na retirada) entram concatenados: um nome com apóstrofo (D'Ávila) quebra o SQL com erro 500 e, em teoria, quem tem o código do condomínio consegue injetar SQL. Decisão da POC; antes de produção, passar para parâmetros (`SqlParameter`).
-- **Notificação** ao morador ainda não é enviada.
+- **Notificação** ao morador ainda não é enviada, então o código de retirada ainda não chega a ele.
+- **`HttpClient`** criado a cada leitura de etiqueta (Groq e Claude), sem reaproveitamento. Decisão da POC: com o volume atual não causa problema; se o volume crescer, trocar por um cliente reutilizado.
 - O código de retirada (6 dígitos) não tem limite de tentativas.
-- **Chaves de API na tabela `Configuracao`:** legíveis por qualquer SQL executado com o login da API, inclusive por uma injeção nos textos livres acima. Use as variáveis de ambiente `CHEGOU_*` para as chaves ou parametrize o SQL.
+- **Chaves de API na tabela `Configuracao`:** legíveis por qualquer SQL executado com o login da API, inclusive por uma injeção nos textos livres acima. Parametrize o SQL e restrinja o acesso ao banco antes de produção.
 
 ## Pendências
 
 - [ ] Enviar a notificação (push) ao morador no registro
-- [ ] Tratar base64 inválido e timeout da IA (hoje viram erro 500) e reutilizar o `HttpClient`
 - [ ] Padronizar os status HTTP (401 para header ausente ou código inválido; 404/409 onde fizer sentido)
 - [ ] Job de retenção: apagar fotos depois de `Condominio.RetencaoFotoDias` (LGPD)
 - [ ] Parametrizar o SQL (`SqlParameter`), principalmente nos textos livres, para guardar as chaves de API na tabela com segurança
