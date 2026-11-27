@@ -46,7 +46,7 @@ namespace Chegou.Api.Controllers.Encomendas
             {
                 var encomenda = new Encomenda
                 {
-                    Id = Convert.ToInt32(row["Id"]),
+                    Id = Convert.ToInt64(row["Id"]),
                     Status = row["Status"].ToString(),
                     Transportadora = row["Transportadora"].ToString(),
                     Rastreio = row["Rastreio"].ToString(),

@@ -2,7 +2,7 @@ namespace Chegou.Api.Models
 {
     public class Encomenda
     {
-        public int Id { get; set; }
+        public long Id { get; set; }
         public string Status { get; set; }
         public string Transportadora { get; set; }
         public string Rastreio { get; set; }
